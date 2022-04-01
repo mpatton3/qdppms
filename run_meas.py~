@@ -1,0 +1,184 @@
+# This script uses pymeasure and Hall_sweep.py and Temp_sweep.py to run
+# experiments with the PPMS and external electronics.
+
+
+import numpy as np
+import pandas as pd
+#import matplotlib.pyplot as plt
+import os
+from time import sleep, time
+from datetime import datetime
+from pymeasure.display import plotter
+from pymeasure.adapters import VISAAdapter
+from pymeasure.experiment import Procedure, Results, Worker
+from pymeasure.experiment import IntegerParameter, FloatParameter, Parameter
+from Hall_sweep import HallSweep
+from Temp_sweep import TempSweep
+import ngcmeas.current_voltage as cv
+import ngcmeas.switch_matrix as sm
+import MultiVu_talk_ngc as mv
+from PythonControl.parse_inputs import inputs
+
+
+def run_Hall(host, port, maxb, current, data_filename):
+
+
+    procedure = HallSweep(host, port, maxb)
+
+    procedure.iterations = 1
+    procedure.high_current = current
+    procedure.delta = 1.e-3
+    procedure.swpct1 = 10
+    procedure.swpct2 = 1
+    procedure.swpct2 = 1
+    procedure.sswpct3 = 10
+    procedure.nplc = 3
+    procedure.rvng = 1.e1
+    now = datetime.now()
+    #procedure.date = now.strftime("%m/%d/%Y, %H:%M:%s")
+
+    #print('Params: ', procedure.parameter_objects())
+    #procedure.startup()
+    #procedure.execute()
+    #hs = HallSweep(host, port)
+    #hs.startup()
+    #print('Hall sweep started up')
+
+
+    #'''
+
+    #data_filename = 'rho_v_B_300K_1T_KTO1916_0.csv'
+    results = Results(procedure, data_filename)
+
+    worker = Worker(results)
+    print('Starting worker to run Hall Sweep')
+    worker.start()
+
+    worker.join(timeout=120) # wait at most 2 min
+
+
+
+def run_temp(host, port, tempset, current, data_filename):
+
+    procedure = TempSweep(host, port, tempset)
+
+    procedure.iterations = 1
+    procedure.high_current = current
+    procedure.delta = 1.e-3
+    procedure.swpct1 = 10
+    procedure.swpct2 = 1
+    procedure.swpct2 = 1
+    procedure.sswpct3 = 10
+    procedure.nplc = 3
+    procedure.rvng = 1.e1
+    now = datetime.now()
+    #procedure.date = now.strftime("%m/%d/%Y, %H:%M:%s")
+
+
+    #data_filename = 'rho_v_T_300K_300K_0T_KTO1916_1.csv'
+    results = Results(procedure, data_filename)
+
+    worker = Worker(results)
+    print('Starting worker to run Temp Sweep')
+    worker.start()
+
+    worker.join(timeout=120) # wait at most 2 min
+
+
+
+
+def main():
+
+
+    host = "128.104.184.130"
+    port = 5000
+
+    directory = r'C:\Users\maglab\Documents\Python Scripts\qdppms\KTO\jk16gso'
+    os.chdir(directory)
+    
+    #run_Hall(host, port, maxb, current, data_filename):
+    #run_temp(host, port, tempset, current, data_filename):
+
+
+    data_filename = 'rho_v_B_300K_0.5T_jk16gso_0.csv'
+    run_Hall(host, port, 5000, 1.5e-6, data_filename)
+
+    data_filename = 'rho_v_T_300K_298K_0T_jk16gso_0.csv'
+    run_temp(host, port, 298, 1.5e-6, data_filename)
+
+
+    '''
+    procedure = TempSweep(host, port, 300.)
+
+    procedure.iterations = 1
+    procedure.high_current = 15.5e-6
+    procedure.delta = 1.e-3
+    procedure.swpct1 = 10
+    procedure.swpct2 = 1
+    procedure.swpct2 = 1
+    procedure.sswpct3 = 10
+    procedure.nplc = 3
+    procedure.rvng = 1.e1
+    now = datetime.now()
+    #procedure.date = now.strftime("%m/%d/%Y, %H:%M:%s")
+
+
+    data_filename = 'rho_v_T_300K_300K_0T_KTO1916_1.csv'
+    results = Results(procedure, data_filename)
+
+    worker = Worker(results)
+    print('Starting worker to run Temp Sweep')
+    worker.start()
+
+    worker.join(timeout=120) # wait at most 2 min
+
+    sleep(1.0)
+
+    procedure = HallSweep(host, port, 10000)
+
+    procedure.iterations = 1
+    procedure.high_current = 40.5e-6
+    procedure.delta = 1.e-3
+    procedure.swpct1 = 10
+    procedure.swpct2 = 1
+    procedure.swpct2 = 1
+    procedure.sswpct3 = 10
+    procedure.nplc = 3
+    procedure.rvng = 1.e1
+    now = datetime.now()
+    #procedure.date = now.strftime("%m/%d/%Y, %H:%M:%s")
+
+    #print('Params: ', procedure.parameter_objects())
+    #procedure.startup()
+    #procedure.execute()
+    #hs = HallSweep(host, port)
+    #hs.startup()
+    #print('Hall sweep started up')
+
+
+
+    data_filename = 'rho_v_B_300K_1T_KTO1916_0.csv'
+    results = Results(procedure, data_filename)
+
+    worker = Worker(results)
+    print('Starting worker to run Hall Sweep')
+    worker.start()
+
+    worker.join(timeout=120) # wait at most 2 min
+
+    '''
+
+
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+
+
+
+
+
+

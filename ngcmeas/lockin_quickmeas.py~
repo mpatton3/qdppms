@@ -1,0 +1,45 @@
+# This script does quick Lockin measurements. It assumes the current soucre
+# and switch matrix are already set and will not change during the measurement.
+
+
+import numpy as np
+import pandas as pd
+import os
+from pymeasure.instruments import Instrument
+from pymeasure.adapters import VISAAdapter
+from time import sleep
+from pymeasure.instruments.keithley import Keithley6221
+from pymeasure.instruments.srs import SR830
+import current_voltage as cv
+
+
+def main():
+
+    host = "128.104.184.130"
+    port = 5000
+
+    adapter2 = VISAAdapter("GPIB::8")
+    LockIn = cv.mySR830(adapter2)
+
+
+    directory = r'C:\Users\maglab\Documents\Python Scripts\data\KTO\jkandke'
+    os.chdir(directory)
+    data_filename = 'rho_v_B_300K_1T_jkke_0.txt'
+
+
+    num = 10
+    volts = []
+    phis = []
+    for i in range(num):
+        meas = LockIn.read_one()
+        volts.append(meas[2]*np.sqrt(2))
+        phis.append(meas[3])
+        sleep(1.0)
+
+    print("Volts: ", volts)
+    print("Phis: ", phis)
+
+
+
+if __name__ == "__main__":
+    main()
