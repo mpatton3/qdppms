@@ -25,11 +25,13 @@ def main():
 
     directory = r'C:\Users\maglab\Documents\Python Scripts\data\BPBO\B016'
     os.chdir(directory)
-    data_filename = 'volt_2w_Hall_v_B_1mA_increasing_300K_phi90deg_B016_0.txt'
+    data_filename = 'volt_2w_Hall_v_B_1mA_1.2T_increasing_300K_phi90deg_B016_0.txt'
 
 
     num = 3
     volts = []
+    voltx = []
+    volty = []
     phis = []
     bflds = []
     done = False
@@ -40,10 +42,12 @@ def main():
         meas = LockIn.read_one()
         
         volts.append(meas[2]*np.sqrt(2))
+        voltx.append(meas[0])
+        volty.append(meas[1])
         phis.append(meas[3])
         bfield = mv.query_field(host, port)
         bflds.append(bfield[0])
-        sleep(0.02)
+        sleep(0.05)
         done = bfield[1] == r'"Holding (Driven)"'
 
     #print("Volts: ", volts)
@@ -52,7 +56,9 @@ def main():
 
     data = pd.DataFrame({"\g(m)\-(0)H": pd.Series(bflds), \
                       "phi": pd.Series(phis),\
-                      "Volts": pd.Series(volts)})
+                      "Volts": pd.Series(volts),\
+                      "Voltx": pd.Series(voltx),\
+                      "Volty": pd.Series(volty)})
 
     data.to_csv(data_filename, sep = "\t", index=False)
                     
