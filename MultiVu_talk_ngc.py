@@ -33,7 +33,7 @@ def query_temp(host, port):
     temp = float(reply[1])
     status = reply[-1].strip()
 
-    print('temp status', status)
+    #print('temp status', status)
 
     time.sleep(0.015)
     #print(temp, temp+1.2)

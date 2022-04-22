@@ -15,7 +15,7 @@ from pymeasure.instruments.srs import SR830
 from pymeasure.experiment import Procedure, Results, Worker
 from pymeasure.experiment import IntegerParameter, FloatParameter, Parameter
 import ngcmeas.current_voltage as cv
-import MultiVu_talk_ngc as m
+import MultiVu_talk_ngc as mv
 
 
 
@@ -25,10 +25,11 @@ class Field_Initialize(Procedure):
         self.host = host
         self.port = port
         self.init_field = init_field
-        self.low_field = low_field
+        self.low_field = abs(low_field)
         self.ramp_rate = ramp_rate
         self.stable_field = r'"Holding (Driven)"'
         self.cycles = cycles
+        self.init_sign = self.init_field/abs(self.init_field)
         super().__init__()
 
     iterations = IntegerParameter('Measurement Number')
@@ -62,12 +63,13 @@ class Field_Initialize(Procedure):
 
 
         self.currentsource.write('OUTP?')
-        if self.currentsource.read() = '1':
+        if self.currentsource.read() == '1':
             print('Current is On')
         else:
             print('need to turn current on')
 
         print('Done Startup')
+        print(mv.query_temp(self.host, self.port))
 
 
     def take_measurement(self):
@@ -95,33 +97,35 @@ class Field_Initialize(Procedure):
 
         self.starttime = time()
 
-        mv.set_field(self.host, self.port, self.init_field, ramp_rate)
+        mv.set_field(self.host, self.port, self.init_field, self.ramp_rate)
+
+        print('In execute')
         sleep(1.8)
         done = False
         print('about to go to Initial Field')
         while not done:
 
-            bfield = take_measurement() # placeholder 
+            bfield = self.take_measurement()  
             done = bfield[1] == self.stable_field
 
 
         for cyc in range(self.cycles):
 
-            mv.set_field(self.host, self.port, self.low_field, ramp_rate)
+            mv.set_field(self.host, self.port, -self.init_sign*self.low_field, self.ramp_rate)
             sleep(1.8)
             done = False
             print('visit number ', cyc, ' to low field')
             while not done:
       
-                bfield = take_measurement() # placeholder 
+                bfield = self.take_measurement()  
                 done = bfield[1] == self.stable_field
 
-            mv.set_field(self.host, self.port, self.low_field, ramp_rate)
+            mv.set_field(self.host, self.port, self.init_sign*self.low_field, self.ramp_rate)
             sleep(1.8)
             done = False
             while not done:
       
-                bfield = take_measurement() # placeholder 
+                bfield = self.take_measurement()  
                 done = bfield[1] == self.stable_field
 
 
@@ -137,7 +141,7 @@ def main():
 
     directory = r'C:\Users\maglab\Documents\Python Scripts\data\BPBO\B015'
     os.chdir(directory)
-    data_filename = 'volt_1w_Hall_v_B_1mA_1.2T_initiate_300K_phi75deg_B015_0.txt'
+    data_filename = 'volt_1w_Hall_v_B_1mA_1.2T_initiate_300K_phi75deg_B015_test.txt'
 
     init_field = 1.2e4 # initial field in Oe
     low_field = 0.2e4 # low field value to sweep between and end at, always pos
@@ -146,6 +150,8 @@ def main():
 
     procedure = Field_Initialize(host, port, init_field, low_field, ramp_rate, cycles)
     
+    procedure.iterations = 1
+
     results = Results(procedure, data_filename)
 
     worker = Worker(results)
