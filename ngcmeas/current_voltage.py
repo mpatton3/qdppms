@@ -8,6 +8,7 @@
 import numpy as np
 import pandas as pd
 import os
+import statistics as st
 from pymeasure.instruments import Instrument
 from pymeasure.adapters import VISAAdapter
 from time import sleep
@@ -133,11 +134,13 @@ class myKeithley6221(Keithley6221):
         self.write("SOUR:WAVE:ARM")
         self.write("SOUR:WAVE:INIT")
         sleep(6.0)
+        print("Current wave on")
 
 
     def AC_abort(self):
 
         self.write("SOUR:WAVE:ABOR")
+        print("Current wave off")
 
 
     def AC_phasemark_on(self):
@@ -152,61 +155,77 @@ class myKeithley6221(Keithley6221):
         print("AC phase mark off")
 
 
+    def current_wave_set(self, amplitude, frequency, offset, turnon, turnoff):
+
+        if turnon == True:
+            self.AC_config(amplitude, frequency, offset)
+            self.AC_phasemark_on()
+            self.AC_arminit()
+
+        if turnoff == True:
+            self.AC_abort()
+
 
 class mySR830(SR830):
-    
+
+    def __init__(self, resourceName):
+
+        self.setdic =  {'inputconfig':{"A": 0, "A-B":1, "1MOhm":2, "100MOhm":3},\
+                        'shldgnd':{"Float":0, "Ground":1},\
+                        'cplng':{"AC":0, "DC":1},\
+                        'lnfltr':{"None":0, "1x Line":1, "2x Line":2, "Both":3},\
+                        'sensty':{"2nV/fA":0, "5nV/fA":1, "10nV/fA":2, "20nV/fA":3, \
+                                "50nV/fA":4, "100nV/fA":5, "200nV/fA":6, "500nV/fA":7, \
+                                "1uV/pA":8, "2uV/pA":9, "5uV/pA":10, "10uV/pA":11, \
+                                "20uV/pA":12, "50uV/pA":13, "100uV/pA":14, "200uV/pA":15, \
+                                "500uV/pA":16, "1mV/nA":17, "2mV/nA":18, "5mV/nA":19, \
+                                "10mV/nA":20, "20mV/nA":21, "50mV/nA":22, "100mV/nA":23, \
+                                "200mV/nA":24, "5000mV/nA":25},\
+                        'tmcnst':{"10us":0, "30us":1, "100us":2, "300us":3, "1ms":4, \
+                                "3ms":5, "10ms":6, "30ms":7, "100ms":8, "300ms":9, \
+                                "1s":10, "3s":11, "10s":12, "30s":13, "100s":14, \
+                                "300s":15, "1ks":16, "3ks":17, "10ks":18, "30ks":19},\
+                        'lpfltsp':{"6dB/oct":0, "12dB/oct":1, "18dB/oct":2, "24dB/oct":3},\
+                        'ref':{"External":0, "Internal":1},\
+                        }
+        self.sensdic_inv = {v: k for k, v in self.setdic['sensty'].items()}
+        super().__init__(resourceName)
+
+
+  
     def config_params(self, inputconfig, shldgnd, cplng, lnfltr, sensty, tmcnst, \
                       lpfltsp, ref, harm, freq, offs):
 
        
         self.write("*RST")
-        setdic = {inputconfig:{"A": 0, "A-B":1, "1MOhm":2, "100MOhm":3},\
-                  shldgnd:{"Float":0, "Ground":1},\
-                  cplng:{"AC":0, "DC":1},\
-                  lnfltr:{"None":0, "1x Line":1, "2x Line":2, "Both":3},\
-                  sensty:{"2nV/fA":0, "5nV/fA":1, "10nV/fA":2, "20nV/fA":3, \
-                          "50nV/fA":4, "100nV/fA":5, "200nV/fA":6, "500nV/fA":7, \
-                          "1uV/pA":8, "2uV/pA":9, "5uV/pA":10, "10uV/pA":11, \
-                          "20uV/pA":12, "50uV/pA":13, "100uV/pA":14, "200uV/pA":15, \
-                          "500uV/pA":16, "1mV/nA":17, "2mV/nA":18, "5mV/nA":19, \
-                          "10mV/nA":20, "20mV/nA":21, "50mV/nA":22, "100mV/nA":23, \
-                          "200mV/nA":24, "5000mV/nA":25},\
-                  tmcnst:{"10us":0, "30us":1, "100us":2, "300us":3, "1ms":4, \
-                          "3ms":5, "10ms":6, "30ms":7, "100ms":8, "300ms":9, \
-                          "1s":10, "3s":11, "10s":12, "30s":13, "100s":14, \
-                          "300s":15, "1ks":16, "3ks":17, "10ks":18, "30ks":19},\
-                  lpfltsp:{"6dB/oct":0, "12dB/oct":1, "18dB/oct":2, "24dB/oct":3},\
-                  ref:{"External":0, "Internal":1},\
-                  }
-
-        inputconfigstr = "ISRC " + str(setdic[inputconfig][inputconfig])
+        inputconfigstr = "ISRC " + str(self.setdic['inputconfig'][inputconfig])
         self.write(inputconfigstr)
 
-        shldgndstr = "IGND " + str(setdic[shldgnd][shldgnd])
+        shldgndstr = "IGND " + str(self.setdic['shldgnd'][shldgnd])
         self.write(shldgndstr)
 
-        cplngstr = "ICPL " + str(setdic[cplng][cplng])
+        cplngstr = "ICPL " + str(self.setdic['cplng'][cplng])
         self.write(cplngstr)
 
-        lnfltrstr = "ILIN " + str(setdic[lnfltr][lnfltr])
+        lnfltrstr = "ILIN " + str(self.setdic['lnfltr'][lnfltr])
         self.write(lnfltrstr)
 
         freqstr = "FREQ " + str(freq)
         self.write(freqstr)
 
-        refstr = "FMOD " + str(setdic[ref][ref])
+        refstr = "FMOD " + str(self.setdic['ref'][ref])
         self.write(refstr)
 
         harmstr = "HARM " + str(harm)
         self.write(harmstr)
 
-        senstystr = "SENS " + str(setdic[sensty][sensty])
+        senstystr = "SENS " + str(self.setdic['sensty'][sensty])
         self.write(senstystr)
 
-        tmcnststr = "OFLT " + str(setdic[tmcnst][tmcnst])
+        tmcnststr = "OFLT " + str(self.setdic['tmcnst'][tmcnst])
         self.write(tmcnststr)
 
-        lpfltspstr = "OFSL " + str(setdic[lpfltsp][lpfltsp])
+        lpfltspstr = "OFSL " + str(self.setdic['lpfltsp'][lpfltsp])
         self.write(lpfltspstr)
         
         self.write("RSLP 2")
@@ -221,7 +240,7 @@ class mySR830(SR830):
     
     def set_sensitivity(self, sensty):
 
-        senstystr = "SENS " + str(setdic[sensty][sensty])
+        senstystr = "SENS " + str(self.setdic['sensty'][sensty])
         self.write(senstystr)
 
         
@@ -258,11 +277,66 @@ class mySR830(SR830):
 
         return numbers
 
+    
+    def query_ovld(self):
 
+        self.write("LIAS? 0") # Input/reserve overload
+        self.lia0 = int(self.read())
+        self.write("LIAS? 2") # Output overload, used for sensitivity
+        self.lia2 = int(self.read())
+        self.write("LIAS? 3") # Reference unlocked
+        self.lia3 = int(self.read())
+       #print(response, type(response))
+
+        return [self.lia0, self.lia2, self.lia3] 
+
+
+    def find_sensitivity(self, init_guess):
+        
+        self.guess = init_guess
+
+        done = True
+        hasfail = True
+        lastgood = True
+        while (done or hasfail or lastgood):
+
+            self.set_sensitivity(self.guess)
+            print('Set Sensitivity')
+            sleep(0.1)
+        
+            self.rs = []
+            self.os = []
+            for i in range(20):
+                self.read_one()
+                self.query_ovld()
+                self.rs.append(self.R)
+                self.os.append(self.lia2)
+
+            if self.os[-1] == 0:
+                #print('sense okay')
+                print(st.stdev(self.rs)/st.mean(self.rs))
+                new_guess_num = self.setdic['sensty'][self.guess] - 1
+                #print(new_guess_num)
+                self.guess = self.sensdic_inv[new_guess_num]       
+                done = False
+                lastgood = False
+                #print('done is False')
+
+            else:
+                #print('sense too low')
+                new_guess_num = self.setdic['sensty'][self.guess] + 1
+                #print(new_guess_num)
+                self.guess = self.sensdic_inv[new_guess_num]
+                hasfail = False 
+                lastgood = True
+                #print('hasfail is False')
+
+
+ 
 
     def read_2harm(self):
 
-        print("Hi")
+        print("Hi, this doesn't work now.")
 
 
 

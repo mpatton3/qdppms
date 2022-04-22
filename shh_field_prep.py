@@ -149,7 +149,9 @@ def main():
     cycles = 4 # number of cyles between low fields before stopping
 
     procedure = Field_Initialize(host, port, init_field, low_field, ramp_rate, cycles)
-    
+
+    # After shh_electronics_init.py is written, modify this code to read those parameters.
+
     procedure.iterations = 1
 
     results = Results(procedure, data_filename)
