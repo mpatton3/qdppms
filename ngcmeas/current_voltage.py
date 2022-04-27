@@ -166,6 +166,77 @@ class myKeithley6221(Keithley6221):
             self.AC_abort()
 
 
+    def current_sweep(self, maxI, numpoints, sweeptype):
+        # This is based on 4-9 of the KE6221 user manual
+
+        if sweeptype == 'linear':
+            swp = 'LIN'
+        if sweeptype == 'log':
+            swp = 'LOG'
+        if sweeptype == 'logarithmic':
+            swp = 'LOG'
+
+        # Set up instrument for sweeps
+        self.write(*RST)
+        self.write("SOUR:CURR 0.0") # Set current to zero
+        self.write("SOUR:CURR:COMP 10") # Set compliance to 10V
+
+        # Configure the sweep
+        self.write("SOUR:SWE:SPAC "+swp) # linear or log
+        self.write("SOUR:CURR:STAR 0.0")
+        self.write("SOUR:CURR:STOP "+str(maxI))
+        self.write("SOUR:CURR:STEP "+str(maxI/(numpoints/2.)))
+        self.write("SOUR:DEL 0.005") # DELAY 
+        self.write("SOUR:SWE:RANG BEST") # BEST FIXED SOURCE RANGE 
+        self.write("SOUR:SWE:COUN 1") # set sweep count to 1
+        self.write("SOUR:SWE:CAB OFF") # disable compliance abort
+        
+        # Arm sweep
+        self.write("SOUR:SWE:ARM")
+
+
+    def current_sweep_trig(self):
+
+        self.write("INIT")
+
+
+    def current_sweep_off(self):
+
+        self.write("OUTP OFF")
+
+
+    def current_sweep_inloop(self):
+
+        stop = False
+        while stop == False:
+            self.write("STAT:MEAS:EVEN?")
+            measstr = self.read()
+            #print(measstr)
+            #print('Ask', self.ask("STAT:MEAS:EVEN?"))
+            bools = int_to_bool_list(int(measstr))
+            #print(bools)
+            stop = bools[9]
+            #print(stop)
+            sleep(0.001)
+
+        self.write(":TRAC:DATA:TYPE?")
+        self.read()
+        self.write(":TRAC:DATA?")
+        # might need to wait here...
+        measdata = self.read()
+
+        print('Print Measured data', measdata)
+
+        res, resstd = meas_value(measdata)
+
+
+        #print('Res', res, 'Ohms', resstd)
+
+        #sleep(0.5)
+        self.write(":TRAC:CLE")
+
+
+
 class mySR830(SR830):
 
     def __init__(self, resourceName):
@@ -242,6 +313,12 @@ class mySR830(SR830):
 
         senstystr = "SENS " + str(self.setdic['sensty'][sensty])
         self.write(senstystr)
+
+
+    def set_time_constant(self, tmcnst):
+
+       tmcnststr = "OFLT " + str(self.setdic['tmcnst'][tmcnst])
+       self.write(tmcnststr)
 
         
     def set_defaults(self):
@@ -332,7 +409,26 @@ class mySR830(SR830):
                 #print('hasfail is False')
 
 
+    def find_time_constant(self, init_guess):
+
+        set_time_constant(init_guess)
+
+            print('Set Time Constant')
+            sleep(0.1) # set in accordance with 5* time constant
+        
+            self.rs = []
+            self.os = []
+            for i in range(20):
+                self.read_one()
+                self.query_ovld()
+                self.rs.append(self.R)
+                self.os.append(self.lia2)
  
+            sd = st.stdev(rs)
+            av = st.mean(rs)
+
+
+
 
     def read_2harm(self):
 
