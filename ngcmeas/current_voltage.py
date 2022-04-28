@@ -36,6 +36,7 @@ def meas_value(measstr):
 
 def iv_meas_parse(measstr):
 
+    # Split and strip the string from the 6221 into floats.
     numbers = [float(x.rstrip('ADC VDC SECS \n')) for x in measstr.split(",")]
     num = len(numbers)
     points = int(num/3) 
@@ -48,17 +49,16 @@ def iv_meas_parse(measstr):
     #print(numbers[1])
     #print(numbers[(1,2,3)])
     #print(numbers[np.arange(3)])
+    # Put each measurement type into its own array.
     volt = [numbers[volt_ind[i]] for i in range(points)]
     time = [numbers[time_ind[i]] for i in range(points)]
     curr = [numbers[curr_ind[i]] for i in range(points)]
 
+    #print(volt)
+    #print(time)
+    #print(curr)
 
-
-    print(volt)
-    print(time)
-    print(curr)
-
-
+    return time, curr, volt
 
 
 class myKeithley6221(Keithley6221):
@@ -194,8 +194,10 @@ class myKeithley6221(Keithley6221):
             self.AC_abort()
 
 
-    def current_sweep(self, maxI, numpoints, sweeptype):
-        # This is based on 4-9 of the KE6221 user manual
+    def current_sweep_setup(self, maxI, numpoints, sweeptype, delay, nplc,
+                            pulse_width):
+        # This is based on 4-9 of the KE6221 user manual, 
+        # and pulsed delta section
 
         if sweeptype == 'linear':
             swp = 'LIN'
@@ -209,21 +211,10 @@ class myKeithley6221(Keithley6221):
         self.write("SOUR:CURR 0.0") # Set current to zero
         self.write("SOUR:CURR:COMP 10") # Set compliance to 10V
 
-        '''
-        # Configure the sweep
-        self.write("SOUR:SWE:SPAC "+swp) # linear or log
-        self.write("SOUR:CURR:STAR 0.0")
-        self.write("SOUR:CURR:STOP "+str(maxI))
-        self.write("SOUR:CURR:STEP "+str(maxI/(numpoints-1)))
-        self.write("SOUR:DEL 0.1") # DELAY 
-        self.write("SOUR:SWE:RANG BEST") # BEST FIXED SOURCE RANGE 
-        self.write("SOUR:SWE:COUN 1") # set sweep count to 1
-        self.write("SOUR:SWE:CAB OFF") # disable compliance abort
-        '''
 
         #self.write("SOUR:PDEL:HIGH 5.e-6")
         self.write("SOUR:PDEL:LOW 0")
-        self.write("SOUR:PDEL:WIDT 400e-6")
+        self.write("SOUR:PDEL:WIDT"+str(pulse_width))
         #self.write("SOUR:PDEL:SDEL 100E-6")
         self.write("SOUR:PDEL:COUN 1")
         #self.write("SOUR:PDEL:RANG BEST")
@@ -237,30 +228,26 @@ class myKeithley6221(Keithley6221):
         self.write("SOUR:CURR:STOP "+str(maxI))
         self.write("SOUR:CURR:STEP "+str(maxI/(numpoints-1.)))
         print("SOUR:CURR:STEP "+str(maxI/(numpoints-1.)))
-        self.write("SOUR:DEL 0.1") # DELAY 
+        self.write("SOUR:DEL "+str(delay)) # DELAY 
         self.write("SOUR:SWE:RANG BEST") # BEST FIXED SOURCE RANGE 
         self.write("SOUR:SWE:COUN 1") # set sweep count to 1
         self.write("SOUR:SWE:CAB OFF") # disable compliance abort
 
 
 
-        self.write("TRAC:POIN 10")
         self.write("UNIT V")
         self.write("FORM:ELEM READ,TST,UNIT,SOUR")
         self.write("TRAC:CLE") 
+        # Read the Operations Event Register to clear it before starting.
         self.write("STAT:OPER:EVEN?")
         measstr = self.read()
-        self.write("SOUR:PDEL:ARM") # Arming sets the buffer to the correct size.
-        sleep(2.)
-        #self.write("INIT:IMM")
-        print('PDEL initiated')
-        # Arm sweep
-        #self.write("SOUR:SWE:ARM")
-        #print('Sweep Armed')
+        self.write("SOUR:PDEL:ARM") # Arming sets buffer to sweep size.
+        sleep(1.5)
 
 
     def current_sweep_trig(self):
-
+        # This is more efficiently done in the current_sweep_inloop() method.
+        
         # Read buffer to clear it
         self.write("STAT:OPER:EVEN?")
         measstr = self.read()
@@ -276,6 +263,7 @@ class myKeithley6221(Keithley6221):
     def current_sweep_inloop(self):
 
         self.write("INIT:IMM")
+        print('PDEL initiated')
         stop = False
 
         print('Going into meas loop')
@@ -283,41 +271,70 @@ class myKeithley6221(Keithley6221):
         while stop == False:
             self.write("STAT:OPER:EVEN?")
             measstr = self.read()
-            #print(measstr)
-            #print('Ask', self.ask("STAT:MEAS:EVEN?"))
             bools = int_to_bool_list(int(measstr))
-            #print('boolean', bools)
-            stop = bools[1]
-            #print(stop)
+            stop = bools[1] # sense the bit the tells 'sweep done'
             sleep(0.15)
             num += 1
 
 
-        print('times through loop ', num)
-        self.write(":TRAC:DATA:TYPE?")
-        resp = self.read()
-        print('type', resp)
-        self.write("TRAC:POIN:ACT?")
-        resp = self.read()
-        print('Actual', resp)
-        self.write("TRAC:POIN?")
-        resp = self.read()
-        print('Points', resp)
         self.write("TRAC:DATA?")
-        # might need to wait here...
+        # Don't need to wait here...
         measdata = self.read()
 
-        print('Print Measured data', measdata)
+        #print('Print Measured data', measdata)
 
-        iv_meas_parse(measdata)
-
-        #res, resstd = meas_value(measdata)
-
-
-        #print('Res', res, 'Ohms', resstd)
+        self.time, self.curr, self.volt = iv_meas_parse(measdata)
 
         #sleep(0.5)
         self.write(":TRAC:CLE")
+
+
+    def IV_compute_res(self):
+
+        # Compute resistance from IV curve
+        num = len(self.curr)
+        numin = int(num/6.)
+        
+        p = np.polyfit(self.curr, self.volt, deg=1)
+
+        # Check IV curve for nonlinearity by comparing low-values fit
+        # to fit for all data.
+        pin = np.polyfit(self.curr[2*numin:4*numin], \
+                         self.volt[2*numin:4*numin], deg=1)
+
+        if p[0] > 1.1*pin[0] or p[0] < 0.9*pin[0]:
+            print('NonLinear IV')
+            nonlin = True
+        else:
+            nonlin = False
+        
+        return p[0], nonlin
+
+    
+    def write_IV_file(self, temp, field, maxI, sweeptype):
+
+        num = 0
+        found_name = False
+        while found_name == False:
+            filename = 'IV_sweep_' + "{:.2f}".format(temp) + 'K_' + \
+                       "{:.0f}".format(field)+'Oe_' + \
+                       "{:.2f}".format(maxI/10**6)'uA_' + \
+                       sweeptype + '_'+str(num) + '.txt'
+
+            if os.path.isfile(filename):
+                num += 1
+            else:
+                found_name = True
+    
+
+        data = pd.DataFrame({'Time': pd.Series(self.time), \
+                             'Current': pd.Series(self.curr), \ 
+                             'Voltage': pd.Series(self.volt)})                               
+
+        data = data[['Time', 'Current', 'Voltage']]
+
+        data.to_csv(filename, sep = '\t', index=False)
+        print('IV file written')
 
 
 
