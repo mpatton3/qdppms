@@ -66,6 +66,8 @@ class myKeithley6221(Keithley6221):
 
         self.write("UNIT V")
 
+        self.write("FORM:ELEM DEF")
+
         self.write(":TRAC:POIN " + str(measnum))
 
         self.write(":SOUR:DELT:ARM")
@@ -177,7 +179,7 @@ class myKeithley6221(Keithley6221):
             swp = 'LOG'
 
         # Set up instrument for sweeps
-        self.write(*RST)
+        self.write("*RST")
         self.write("SOUR:CURR 0.0") # Set current to zero
         self.write("SOUR:CURR:COMP 10") # Set compliance to 10V
 
@@ -185,18 +187,56 @@ class myKeithley6221(Keithley6221):
         self.write("SOUR:SWE:SPAC "+swp) # linear or log
         self.write("SOUR:CURR:STAR 0.0")
         self.write("SOUR:CURR:STOP "+str(maxI))
-        self.write("SOUR:CURR:STEP "+str(maxI/(numpoints/2.)))
-        self.write("SOUR:DEL 0.005") # DELAY 
+        self.write("SOUR:CURR:STEP "+str(maxI/(numpoints-1)))
+        self.write("SOUR:DEL 0.1") # DELAY 
         self.write("SOUR:SWE:RANG BEST") # BEST FIXED SOURCE RANGE 
         self.write("SOUR:SWE:COUN 1") # set sweep count to 1
         self.write("SOUR:SWE:CAB OFF") # disable compliance abort
-        
+
+        #self.write("SOUR:PDEL:HIGH 5.e-6")
+        self.write("SOUR:PDEL:LOW 0")
+        self.write("SOUR:PDEL:WIDT 400e-6")
+        #self.write("SOUR:PDEL:SDEL 100E-6")
+        self.write("SOUR:PDEL:COUN 2")
+        #self.write("SOUR:PDEL:RANG BEST")
+        #self.write("SOUR:PDEL:INT 5")
+        self.write("SOUR:PDEL:SWE ON")
+        #self.write("SOUR:PDEL:LME 2")
+
+        # Configure the sweep
+        self.write("SOUR:SWE:SPAC "+swp) # linear or log
+        self.write("SOUR:CURR:STAR 0.0")
+        self.write("SOUR:CURR:STOP "+str(maxI))
+        self.write("SOUR:CURR:STEP "+str(maxI/(numpoints-1.)))
+        print("SOUR:CURR:STEP "+str(maxI/(numpoints-1.)))
+        self.write("SOUR:DEL 0.1") # DELAY 
+        self.write("SOUR:SWE:RANG BEST") # BEST FIXED SOURCE RANGE 
+        self.write("SOUR:SWE:COUN 1") # set sweep count to 1
+        self.write("SOUR:SWE:CAB OFF") # disable compliance abort
+
+
+
+        self.write("TRAC:POIN 10")
+        self.write("UNIT V")
+        self.write("FORM:ELEM READ,TST,UNIT,SOUR")
+        self.write("TRAC:CLE") 
+        self.write("STAT:OPER:EVEN?")
+        measstr = self.read()
+        self.write("SOUR:PDEL:ARM") # Arming sets the buffer to the correct size.
+        sleep(2.)
+        #self.write("INIT:IMM")
+        print('PDEL initiated')
         # Arm sweep
-        self.write("SOUR:SWE:ARM")
+        #self.write("SOUR:SWE:ARM")
+        #print('Sweep Armed')
 
 
     def current_sweep_trig(self):
 
+        # Read buffer to clear it
+        self.write("STAT:OPER:EVEN?")
+        measstr = self.read()
+ 
         self.write("INIT")
 
 
@@ -207,27 +247,41 @@ class myKeithley6221(Keithley6221):
 
     def current_sweep_inloop(self):
 
+        self.write("INIT:IMM")
         stop = False
+
+        print('Going into meas loop')
+        num = 0
         while stop == False:
-            self.write("STAT:MEAS:EVEN?")
+            self.write("STAT:OPER:EVEN?")
             measstr = self.read()
             #print(measstr)
             #print('Ask', self.ask("STAT:MEAS:EVEN?"))
             bools = int_to_bool_list(int(measstr))
-            #print(bools)
-            stop = bools[9]
+            #print('boolean', bools)
+            stop = bools[1]
             #print(stop)
-            sleep(0.001)
+            sleep(0.15)
+            num += 1
 
+
+        print('times through loop ', num)
         self.write(":TRAC:DATA:TYPE?")
-        self.read()
-        self.write(":TRAC:DATA?")
+        resp = self.read()
+        print('type', resp)
+        self.write("TRAC:POIN:ACT?")
+        resp = self.read()
+        print('Actual', resp)
+        self.write("TRAC:POIN?")
+        resp = self.read()
+        print('Points', resp)
+        self.write("TRAC:DATA?")
         # might need to wait here...
         measdata = self.read()
 
         print('Print Measured data', measdata)
 
-        res, resstd = meas_value(measdata)
+        #res, resstd = meas_value(measdata)
 
 
         #print('Res', res, 'Ohms', resstd)
@@ -411,21 +465,21 @@ class mySR830(SR830):
 
     def find_time_constant(self, init_guess):
 
-        set_time_constant(init_guess)
+        self.set_time_constant(init_guess)
 
-            print('Set Time Constant')
-            sleep(0.1) # set in accordance with 5* time constant
+        print('Set Time Constant')
+        sleep(0.1) # set in accordance with 5* time constant
         
-            self.rs = []
-            self.os = []
-            for i in range(20):
-                self.read_one()
-                self.query_ovld()
-                self.rs.append(self.R)
-                self.os.append(self.lia2)
+        self.rs = []
+        self.os = []
+        for i in range(20):
+            self.read_one()
+            self.query_ovld()
+            self.rs.append(self.R)
+            self.os.append(self.lia2)
  
-            sd = st.stdev(rs)
-            av = st.mean(rs)
+        sd = st.stdev(rs)
+        av = st.mean(rs)
 
 
 
