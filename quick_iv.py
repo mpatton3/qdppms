@@ -17,7 +17,7 @@ def main():
     adapter = VISAAdapter("GPIB0::12")
     ke6221 = cv.myKeithley6221(adapter)
 
-    ke6221.current_sweep(5.e-6, 11, 'linear')
+    ke6221.current_sweep_setup(5.e-6, 11, 'linear')
     #ke6221.current_sweep_trig()
     for i in range(18):
         ke6221.current_sweep_inloop()
