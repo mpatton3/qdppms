@@ -19,7 +19,7 @@ def main():
 
     ke6221.current_sweep(5.e-6, 11, 'linear')
     #ke6221.current_sweep_trig()
-    for i in range(18):
+    for i in range(1):
         ke6221.current_sweep_inloop()
     sleep(1.0)
     #ke6221.current_sweep_off()
