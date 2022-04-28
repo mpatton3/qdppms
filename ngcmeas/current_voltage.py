@@ -34,6 +34,32 @@ def meas_value(measstr):
     return mn, std
 
 
+def iv_meas_parse(measstr):
+
+    numbers = [float(x.rstrip('ADC VDC SECS \n')) for x in measstr.split(",")]
+    num = len(numbers)
+    points = int(num/3) 
+
+    volt_ind = np.arange(num/3, dtype=int)*3
+    time_ind = np.arange(num/3, dtype=int)*3+1
+    curr_ind = np.arange(num/3, dtype=int)*3+2
+
+
+    #print(numbers[1])
+    #print(numbers[(1,2,3)])
+    #print(numbers[np.arange(3)])
+    volt = [numbers[volt_ind[i]] for i in range(points)]
+    time = [numbers[time_ind[i]] for i in range(points)]
+    curr = [numbers[curr_ind[i]] for i in range(points)]
+
+
+
+    print(volt)
+    print(time)
+    print(curr)
+
+
+
 
 class myKeithley6221(Keithley6221):
 
@@ -183,6 +209,7 @@ class myKeithley6221(Keithley6221):
         self.write("SOUR:CURR 0.0") # Set current to zero
         self.write("SOUR:CURR:COMP 10") # Set compliance to 10V
 
+        '''
         # Configure the sweep
         self.write("SOUR:SWE:SPAC "+swp) # linear or log
         self.write("SOUR:CURR:STAR 0.0")
@@ -192,12 +219,13 @@ class myKeithley6221(Keithley6221):
         self.write("SOUR:SWE:RANG BEST") # BEST FIXED SOURCE RANGE 
         self.write("SOUR:SWE:COUN 1") # set sweep count to 1
         self.write("SOUR:SWE:CAB OFF") # disable compliance abort
+        '''
 
         #self.write("SOUR:PDEL:HIGH 5.e-6")
         self.write("SOUR:PDEL:LOW 0")
         self.write("SOUR:PDEL:WIDT 400e-6")
         #self.write("SOUR:PDEL:SDEL 100E-6")
-        self.write("SOUR:PDEL:COUN 2")
+        self.write("SOUR:PDEL:COUN 1")
         #self.write("SOUR:PDEL:RANG BEST")
         #self.write("SOUR:PDEL:INT 5")
         self.write("SOUR:PDEL:SWE ON")
@@ -205,7 +233,7 @@ class myKeithley6221(Keithley6221):
 
         # Configure the sweep
         self.write("SOUR:SWE:SPAC "+swp) # linear or log
-        self.write("SOUR:CURR:STAR 0.0")
+        self.write("SOUR:CURR:STAR "+str(-maxI))
         self.write("SOUR:CURR:STOP "+str(maxI))
         self.write("SOUR:CURR:STEP "+str(maxI/(numpoints-1.)))
         print("SOUR:CURR:STEP "+str(maxI/(numpoints-1.)))
@@ -280,6 +308,8 @@ class myKeithley6221(Keithley6221):
         measdata = self.read()
 
         print('Print Measured data', measdata)
+
+        iv_meas_parse(measdata)
 
         #res, resstd = meas_value(measdata)
 
