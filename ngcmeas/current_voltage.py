@@ -199,6 +199,8 @@ class myKeithley6221(Keithley6221):
         # This is based on 4-9 of the KE6221 user manual, 
         # and pulsed delta section
 
+        if sweeptype == 'lin':
+            swp = 'LIN'
         if sweeptype == 'linear':
             swp = 'LIN'
         if sweeptype == 'log':
@@ -214,7 +216,10 @@ class myKeithley6221(Keithley6221):
 
         #self.write("SOUR:PDEL:HIGH 5.e-6")
         self.write("SOUR:PDEL:LOW 0")
-        self.write("SOUR:PDEL:WIDT"+str(pulse_width))
+        self.write("SOUR:PDEL:WIDT "+str(pulse_width))
+
+        self.write("syst:err?")
+        print(self.read())
         #self.write("SOUR:PDEL:SDEL 100E-6")
         self.write("SOUR:PDEL:COUN 1")
         #self.write("SOUR:PDEL:RANG BEST")
@@ -232,8 +237,6 @@ class myKeithley6221(Keithley6221):
         self.write("SOUR:SWE:RANG BEST") # BEST FIXED SOURCE RANGE 
         self.write("SOUR:SWE:COUN 1") # set sweep count to 1
         self.write("SOUR:SWE:CAB OFF") # disable compliance abort
-
-
 
         self.write("UNIT V")
         self.write("FORM:ELEM READ,TST,UNIT,SOUR")
@@ -317,8 +320,8 @@ class myKeithley6221(Keithley6221):
         found_name = False
         while found_name == False:
             filename = 'IV_sweep_' + "{:.2f}".format(temp) + 'K_' + \
-                       "{:.0f}".format(field)+'Oe_' + \
-                       "{:.2f}".format(maxI/10**6)'uA_' + \
+                       "{:.0f}".format(field) + 'Oe_' + \
+                       "{:.2f}".format(maxI/10**6) + 'uA_' + \
                        sweeptype + '_'+str(num) + '.txt'
 
             if os.path.isfile(filename):
@@ -328,7 +331,7 @@ class myKeithley6221(Keithley6221):
     
 
         data = pd.DataFrame({'Time': pd.Series(self.time), \
-                             'Current': pd.Series(self.curr), \ 
+                             'Current': pd.Series(self.curr), \
                              'Voltage': pd.Series(self.volt)})                               
 
         data = data[['Time', 'Current', 'Voltage']]

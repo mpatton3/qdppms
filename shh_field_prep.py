@@ -138,7 +138,6 @@ def main():
     port = 5000
 
 
-
     directory = r'C:\Users\maglab\Documents\Python Scripts\data\BPBO\B015'
     os.chdir(directory)
     data_filename = 'volt_1w_Hall_v_B_1mA_1.2T_initiate_300K_phi75deg_B015_test.txt'
