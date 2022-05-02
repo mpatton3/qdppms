@@ -125,9 +125,9 @@ def main():
 
 
     # Start editing
-    directory = r'C:\Users\maglab\Documents\Python Scripts\data\BPBO\B015\IV_12K_3K_cool'
+    directory = r'C:\Users\maglab\Documents\Python Scripts\data\BPBO\B015\IV_3K_9K_warm'
     os.chdir(directory)
-    data_filename = 'IVsweeps_12K_3K_0T_B015_0.csv'
+    data_filename = 'IVsweeps_3K_9K_0T_B015_0.csv'
 
 
     '''
@@ -137,11 +137,11 @@ def main():
     procedure = IVSweep(host, port)
     
     procedure.iterations = 1
-    procedure.max_current = 2.0e-3 # Amps
-    procedure.numberpoints = 101 # in IV sweep
-    procedure.start_temp = 12. # K
-    procedure.end_temp = 3. # K
-    procedure.temp_points = 91 # in Temp sweep
+    procedure.max_current = 500.0e-6 # Amps
+    procedure.numberpoints = 151 # in IV sweep
+    procedure.start_temp = 3. # K
+    procedure.end_temp = 9. # K
+    procedure.temp_points = 31 # in Temp sweep
     # Stop editing
 
     procedure.delay = 1.e-1

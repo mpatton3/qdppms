@@ -421,10 +421,16 @@ class mySR830(SR830):
 
     def set_time_constant(self, tmcnst):
 
-       tmcnststr = "OFLT " + str(self.setdic['tmcnst'][tmcnst])
-       self.write(tmcnststr)
+        tmcnststr = "OFLT " + str(self.setdic['tmcnst'][tmcnst])
+        self.write(tmcnststr)
 
-        
+
+    def set_harmonic(self, harm):
+
+        harmstr ="HARM " + str(harm)
+        self.write(harmstr)
+
+       
     def set_defaults(self):
         
         inputconfig = "A-B"
