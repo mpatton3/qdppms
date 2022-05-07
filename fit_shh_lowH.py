@@ -203,15 +203,20 @@ class SHH_Measurement:
     def calculate_Hdl(self):
 
 
-        Hdls = []
+        self.Hdls = []
         for i in range(len(self.data_1w.params)):
             Hdls.append(-2.*self.data_2w.params[i][0]/(2*self.data_1w.params[i][0]))
 
-        self.Hdl_mean = np.mean(Hdls)
-        self.Hdl_std = np.std(Hdls)
+        self.Hdl_mean = np.mean(self.Hdls)
+        self.Hdl_std = np.std(self.Hdls)
         print(Hdls)
         print('Hdl = ', self.Hdl_mean, '\pm ', self.Hdl_std)
 
+
+    def write_summary_file(self, sample):
+
+        filename = 'SHH_summary_'+ "{:.2f}".format(temp) + 'K_' + \
+                    sample + '.txt'
 
 
 
@@ -220,6 +225,8 @@ def main():
 
     directory = r'C:\Users\oxide-x240\Downloads\test\test'
     os.chdir(directory)
+
+    sample = 'B015' # sample name, type = string
 
     lowHcut = 500. # Oe field magnitude above which to fit data.
 
