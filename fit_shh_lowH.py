@@ -28,8 +28,14 @@ def find_line(fn, strng):
 
 def get_current(string):
     
-    ang = re.findall('\d(?=mA)|\d\d(?=mA)|\d\d\d(?=mA)', string)
+    restring = '(?<=B_)\d\d\d(?=mA)|(?<=B_)\d\d(?=mA)|(?<=B_)\d(?=mA)|' + \
+               '(?<=B_)\d\S\d(?=mA)|(?<=B_)\d\S\d\d(?=mA)|' + \
+               '(?<=B_)\d\d\S\d\d(?=mA)|(?<=B_)\d\d\S\d(?=mA)|' + \
+               '(?<=B_)\d\d\d\S\d\d(?=mA)|(?<=B_)\d\d\d\S\d(?=mA)'
+
+    ang = re.findall(restring, string)
     angle = float(ang[0])
+    print('Currents ', ang)
 
     return angle
 
@@ -123,6 +129,26 @@ def plot_fits(data, indices, fit_funcs, x_name = r'\g(m)\-(0)H', y_name='Voltx')
         plt.plot(data.loc[indices[i], x_name], fit_funcs[i])
         plt.show()
 
+def init_file(temp, sample):
+
+    filename = 'SHH_summary_'+ "{:.2f}".format(temp) + 'K_' + \
+                   sample + '.txt'
+    
+    if os.path.isfile(filename):
+        os.remove(filename)
+
+    column_names = 'Temperature\tCurrent\tH\\-(DL) posinc\t' + \
+                   'H\\-(DL) posdec\tH\\-(DL) neginc\t' + \
+                   'H\\-(DL) negdec\tH\\-(DL) mean\tH\\-(DL) std'
+
+    column_units = 'K\tA\tOe\tOe\tOe\tOe\tOe\tOe'
+
+    with open(filename, 'w') as f:
+        f.write(column_names)
+        f.write('\n')
+        f.write(column_units)
+        f.write('\n')
+
 
 class SweepData_1w:
 
@@ -182,11 +208,15 @@ class SweepData_2w:
 
 class SHH_Measurement:
 
-    def __init__(self, temp, current):
+    def __init__(self, temp, current, sample, write = False):
 
         self.temp = temp
         self.current = current
+        self.sample = sample
 
+        self.filename = 'SHH_summary_'+ "{:.2f}".format(self.temp) + 'K_' + \
+                       self.sample + '.txt'
+        
 
     def first_harmonic(self, filename, lowHcut, plot=False):
 
@@ -202,53 +232,61 @@ class SHH_Measurement:
 
     def calculate_Hdl(self):
 
-
         self.Hdls = []
         for i in range(len(self.data_1w.params)):
-            Hdls.append(-2.*self.data_2w.params[i][0]/(2*self.data_1w.params[i][0]))
+            self.Hdls.append(-2.*self.data_2w.params[i][0]/(2*self.data_1w.params[i][0]))
 
         self.Hdl_mean = np.mean(self.Hdls)
         self.Hdl_std = np.std(self.Hdls)
-        print(Hdls)
+        print(self.Hdls)
         print('Hdl = ', self.Hdl_mean, '\pm ', self.Hdl_std)
 
 
-    def write_summary_file(self, sample):
+    def write_summary_file(self):
+       
+        dataline = "{:.2f}".format(self.temp) + '\t' + \
+                   "{:.2e}".format(self.current) + '\t' 
 
-        filename = 'SHH_summary_'+ "{:.2f}".format(temp) + 'K_' + \
-                    sample + '.txt'
+        for value in self.Hdls:
+            dataline +=  "{:.4f}".format(value) + '\t'
+
+        dataline +=  "{:.4f}".format(self.Hdl_mean) + '\t'
+        dataline +=  "{:.4f}".format(self.Hdl_std) + '\t'
+
+        with open(self.filename, 'a') as f:
+            f.write(dataline)
+            f.write('\n')
 
 
 
 
 def main():
 
-    directory = r'C:\Users\oxide-x240\Downloads\test\test'
-    os.chdir(directory)
+    # PARAMETERS TO SET
+    directory = r'R:\Lab Member Files\Tony Edgeton\Raw Data\Transport\PPMS\B015\test\10K'
 
-    sample = 'B015' # sample name, type = string
-
+    sample = 'B015test' # sample name, type = string
+    write_summary = True # Whether to write a file summarizing reduced data.
+    show_plots = False # Show plots of data with fits.
     lowHcut = 500. # Oe field magnitude above which to fit data.
 
-    # Import and Fit 1w data
-    fl1 = glob.glob('volt_1w_Hall*_meas_*.txt')
+    # Stop setting params
 
-    values1 = values_and_names('volt_1w_Hall*.txt')
+    os.chdir(directory)
+    # Get filenames and Temp and Current
+    values1 = values_and_names('volt_1w_Hall*_*meas_*.txt')
     print(values1)
-    
-    filename1 = r'volt_1w_Hall_v_B_8mA_m0.32T_meas_30K_phi75deg_B015_0.txt'
-    #filedata = SweepData_1w(filename1)
-    #filedata.fit_V_v_H(lowHcut, plot=False)
-
-    # Import and Fit 2w data
-    fl2 = glob.glob('volt_2w_Hall*.txt')
-
+ 
+    # Get filenames and Temp and Current
     values2 = values_and_names('volt_2w_Hall*_meas_*.txt')
 
-    filename2 = r'volt_2w_Hall_v_B_8mA_m0.43T_meas_30K_phi75deg_B015_0.txt'
-    #filedata = SweepData_2w(filename2)
-    #filedata.fit_V_v_H(lowHcut, plot=False)
+    #filename2 = r'volt_2w_Hall_v_B_8mA_m0.43T_meas_30K_phi75deg_B015_0.txt'
 
+    # Initialize summary file
+    if write_summary:
+        init_file(values1[0][0], sample)
+
+    # pair files with the same currents for analysis
     for i in range(len(values1)):
         j = 0
         found = False
@@ -271,11 +309,13 @@ def main():
                             'K ', values1[i][1], 'mA :(')
 
         if compute:
-            shh_meas = SHH_Measurement(values1[i][0], values1[i][1]*10**-3)
-            shh_meas.first_harmonic(values1[i][2], lowHcut, plot=False)
-            shh_meas.second_harmonic(values2[j][2], lowHcut, plot=False)
+            shh_meas = SHH_Measurement(values1[i][0], values1[i][1]*10**-3,\
+                                      sample, write = write_summary)
+            shh_meas.first_harmonic(values1[i][2], lowHcut, plot=show_plots)
+            shh_meas.second_harmonic(values2[j][2], lowHcut, plot=show_plots)
             shh_meas.calculate_Hdl()
-
+            if write_summary:
+                shh_meas.write_summary_file()
 
 
 if __name__ == "__main__":
