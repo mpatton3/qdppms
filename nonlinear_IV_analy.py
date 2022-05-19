@@ -12,6 +12,17 @@ import glob
 from scipy.stats import linregress
 
 
+def symmetrize(series):
+
+    ln = len(series)
+    sym = []
+    for i in range(ln):
+        sym.append((series[ln-1-i]+series[i])/2.)
+
+    plt.plot(sym)
+    plt.show()
+
+
 def average_voltages(dflist):
     vs=[]
     for i in range(len(dflist[0])):
@@ -19,6 +30,18 @@ def average_voltages(dflist):
         for j in range(len(dflist)):
 
             vsrow.append(dflist[j].loc[i,'Voltage'])
+
+        '''
+        for i in range(2):
+            vsrow.remove(min(vsrow))
+            vsrow.remove(max(vsrow))
+        #print(vsrow.index(max(vsrow)))
+            #print(len(vsrow))
+        '''
+
+        if i == 47:
+            plt.hist(vsrow)
+            plt.show()
 
         vs.append(np.mean(vsrow))
 
@@ -33,6 +56,8 @@ def voltage_difference(dfpos, dfneg):
     data_diff = dfpos['Voltage'] - dfneg['Voltage']
     print(type(data_diff))
     data_diff = pd.DataFrame({'Current': dfpos['Current'], \
+                              'Volts Pos': dfpos['Voltage'], \
+                              'Volts Neg': dfneg['Voltage'], \
                               'V diff': data_diff})
     params = linregress(data_diff['Current'], data_diff['V diff'])
     print(params.slope)
@@ -46,14 +71,14 @@ def voltage_difference(dfpos, dfneg):
 def main():
 
 
-    directory = r'R:\Lab Member Files\Tony Edgeton\Raw Data\Transport\PPMS\B015\IV_SC_field\4.6K\long'
+    directory = r'R:\Lab Member Files\Tony Edgeton\Raw Data\Transport\PPMS\B015\5K_check\3kOe_avg'
 
     os.chdir(directory)
 
 
-    flneg = glob.glob('IV_sweep*_-4000Oe_*.txt')
+    flneg = glob.glob('IV_sweep*_-3000Oe_18*.txt')
     flzer = glob.glob('IV_sweep*_0Oe_*.txt')
-    flpos = glob.glob('IV_sweep*_4000Oe_*.txt')
+    flpos = glob.glob('IV_sweep*_3000Oe_18*.txt')
 
 
     dataneg = []
@@ -78,6 +103,8 @@ def main():
     datapos_avg = average_voltages(datapos)
 
 
+
+
     data_diff = datapos_avg.loc[:,'Voltage'] - dataneg_avg.loc[:,'Voltage']
     print(type(data_diff))
     data_diff = pd.DataFrame({'Current': dataneg[0].loc[:,'Current'], \
@@ -88,15 +115,17 @@ def main():
                              params.slope*data_diff['Current'] - params.intercept
 
     data_diff_avg = voltage_difference(datapos_avg, dataneg_avg)
-    data_diff = voltage_difference(datapos[1], dataneg[1])
+    data_diff = voltage_difference(datapos[0], dataneg[0])
 
+    symmetrize(data_diff_avg['V diff - lin'])
 
+    data_diff_avg.to_csv('data_difference_average.txt', sep='\t', index=False)
 
     #dataneg[0].plot('Current', 'Voltage', kind='scatter')
     #dataneg_avg.plot('Current', 'Voltage', kind='scatter')
     #plt.show()
     #data_diff.plot('Current', 'V diff', kind='scatter')
-    plt.plot(data_diff['Current'], data_diff['V diff - lin'], 'b')
+    #plt.plot(data_diff['Current'], data_diff['V diff - lin'], 'b')
     plt.plot(data_diff_avg['Current'], data_diff_avg['V diff - lin'], 'g')
     plt.show()
  
