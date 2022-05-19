@@ -5,6 +5,7 @@
 import numpy as np
 import pandas as pd
 import os
+from time import sleep
 from pymeasure.instruments import Instrument
 from pymeasure.adapters import VISAAdapter
 
@@ -142,20 +143,26 @@ def main():
     ke7001gpib = 7
     adapter = VISAAdapter("GPIB::7")
     KE7001SM = Keithley7001(adapter, "Switch")
-    KE7001SM.write(":CLOS(@ 1!1!3)")
+
+
     KE7001SM.open_all()
+    sleep(1.0)
+ 
+    KE7001SM.write(":CLOS (@ 1!1!7, 1!2!9, 1!3!7, 1!4!9)")
+    #KE7001SM.open_all()
+    sleep(1.0)
 
     pinA = 1
     pinB = 2
     pinC = 2
     pinD = 1
 
-    KE7001SM.set_pins(pinA, pinB, pinC, pinD)
-    KE7001SM.clos_vdp1()
-    print(KE7001SM.ask(":ROUT:CLOS? (@ 1!1!1, 1!1!2)"))
-    KE7001SM.open_all()
-    print(KE7001SM.ask(":ROUT:CLOS? (@ 1!1!1, 1!1!2)"))
-    row1 = 3
+    #KE7001SM.set_pins(pinA, pinB, pinC, pinD)
+    #KE7001SM.clos_vdp1()
+    print(KE7001SM.ask(":ROUT:CLOS? (@ 1!1!4, 1!2!3)"))
+    #KE7001SM.open_all()
+    #print(KE7001SM.ask(":ROUT:CLOS? (@ 1!1!1, 1!1!2)"))
+    #row1 = 3
     #row1str = ":CLSO(@ 1!1!" + str(row1) + ")"
     print("DONE")
 

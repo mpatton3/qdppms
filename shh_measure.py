@@ -10,6 +10,7 @@ import os
 from pymeasure.instruments import Instrument
 from pymeasure.adapters import VISAAdapter
 from time import sleep, time
+from datetime import datetime
 from pymeasure.instruments.keithley import Keithley6221
 from pymeasure.instruments.srs import SR830
 from pymeasure.experiment import Procedure, Results, Worker
@@ -21,15 +22,14 @@ import MultiVu_talk_ngc as mv
 
 class Field_Initialize(Procedure):
 
-    def __init__(self, host, port, init_field, low_field, ramp_rate, cycles):
+    def __init__(self, host, port, max_field, ramp_rate, cycles):
         self.host = host
         self.port = port
-        self.init_field = init_field
-        self.low_field = abs(low_field)
+        self.max_field = max_field
         self.ramp_rate = ramp_rate
         self.stable_field = r'"Holding (Driven)"'
         self.cycles = cycles
-        self.init_sign = self.init_field/abs(self.init_field)
+        self.init_sign = self.max_field/abs(self.max_field)
         super().__init__()
 
     iterations = IntegerParameter('Measurement Number')
@@ -42,10 +42,12 @@ class Field_Initialize(Procedure):
     shield_ground = IntegerParameter('Shield Ground', default = 0) # Default is Float
     cplng = IntegerParameter('AC or DC Coupling', default = 0) # Default is AC
     line_filter = IntegerParameter('Line Filter', default = 3) # Default is Both
-    sensty = IntegerParameter('Sensitivity', default = 21) 
-    tmcnst = IntegerParameter('Time Constant', default = 4)
+    sensty = Parameter('Sensitivity') 
+    tmcnst = Parameter('Time Constant')
     lpfltsp = IntegerParameter('Low Pass Filter', default = 2) # Default is 18dB/oct
     ref = IntegerParameter('Reference Signal', default = 0) # Default is External
+    date = Parameter('Date and Time')
+
 
     DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'phi', 'Volts', \
                     'Voltx', 'Volty']
@@ -97,7 +99,7 @@ class Field_Initialize(Procedure):
 
         self.starttime = time()
 
-        mv.set_field(self.host, self.port, self.init_field, self.ramp_rate)
+        mv.set_field(self.host, self.port, self.max_field, self.ramp_rate)
 
         print('In execute')
         sleep(1.8)
@@ -109,6 +111,18 @@ class Field_Initialize(Procedure):
             done = bfield[1] == self.stable_field
 
 
+        mv.set_field(self.host, self.port, -self.max_field, self.ramp_rate)
+        print('sweeping back')
+
+        sleep(1.8)
+        done = False
+        while not done:
+
+            bfield = self.take_measurement()  
+            done = bfield[1] == self.stable_field
+
+ 
+        '''
         for cyc in range(self.cycles):
 
             mv.set_field(self.host, self.port, -self.init_sign*self.low_field, self.ramp_rate)
@@ -127,7 +141,7 @@ class Field_Initialize(Procedure):
       
                 bfield = self.take_measurement()  
                 done = bfield[1] == self.stable_field
-
+        '''
 
 
 
@@ -146,22 +160,28 @@ def main():
 
     LockIn.get_params()
 
+    now = datetime.now()
+
 
     directory = r'C:\Users\maglab\Documents\Python Scripts\data\BPBO\B015\test\2.5K'
     os.chdir(directory)
-    data_filename = 'volt_2w_Hall_v_B_10mA_m1.5T_m0.32T_initiate_2.5K_phi75deg_B015_1.txt'
+    data_filename = 'volt_2w_Hall_v_B_2mA_m0.32T_meas_2.5K_phi75deg_B015_0.txt'
 
-    init_field = -1.5e4 # initial field in Oe
-    low_field = -0.32e4 # low field value to sweep between and end at, always pos
-    ramp_rate = 75 # field ramp rate in Oe/sec
+    max_field = 0.32e4 # initial field in Oe
+    #low_field = -0.43e4 # low field value to sweep beween and end at, always pos
+    ramp_rate = 15 # field ramp rate in Oe/sec
     cycles = 4 # number of cyles between low fields before stopping
 
-    procedure = Field_Initialize(host, port, init_field, low_field, ramp_rate, cycles)
+    procedure = Field_Initialize(host, port, max_field, ramp_rate, cycles)
 
     # After shh_electronics_init.py is written, modify this code to read those parameters.
 
+    
     procedure.iterations = 1
-
+    procedure.sensty = LockIn.sensty
+    procedure.tmcnst = LockIn.tmcnst
+    procedure.date = now.strftime("%m/%d/%Y, %H:%M:%S")
+ 
     results = Results(procedure, data_filename)
 
     worker = Worker(results)

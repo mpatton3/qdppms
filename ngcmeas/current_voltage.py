@@ -28,6 +28,7 @@ def meas_value(measstr):
 
     inds = np.arange(len(numbers)/2)*2
 
+    print(min(numbers))
     mn = np.mean(numbers[::2])
     std = np.std(numbers[::2])
 
@@ -35,6 +36,35 @@ def meas_value(measstr):
 
 
 def iv_meas_parse(measstr):
+
+    print('In IV_parse')
+    # Split and strip the string from the 6221 into floats.
+    numbers = [float(x.rstrip('ADC VDC SECS \n')) for x in measstr.split(",")]
+    num = len(numbers)
+    points = int(num/3) 
+
+    volt_ind = np.arange(num/3, dtype=int)*3
+    time_ind = np.arange(num/3, dtype=int)*3+1
+    curr_ind = np.arange(num/3, dtype=int)*3+2
+    print('split big string')
+ 
+
+    #print(numbers[1])
+    #print(numbers[(1,2,3)])
+    #print(numbers[np.arange(3)])
+    # Put each measurement type into its own array.
+    volt = [numbers[volt_ind[i]] for i in range(points)]
+    time = [numbers[time_ind[i]] for i in range(points)]
+    curr = [numbers[curr_ind[i]] for i in range(points)]
+
+    #print(volt)
+    #print(time)
+    #print(curr)
+
+    return time, curr, volt
+
+
+def dc_meas_parse(measstr):
 
     # Split and strip the string from the 6221 into floats.
     numbers = [float(x.rstrip('ADC VDC SECS \n')) for x in measstr.split(",")]
@@ -61,62 +91,85 @@ def iv_meas_parse(measstr):
     return time, curr, volt
 
 
+
 class myKeithley6221(Keithley6221):
 
-    def arm_preloop_delta(self, highcurr, delta, swpct1, swpct2, swpct3, \
+    def arm_delta(self, highcurr, lowcurr, delta, swpct1, swpct2, swpct3, \
                           nplc, rvng, measnum):
 
-
+        print('in arm delta')
         self.reset()
-
 
         self.write(":TRAC:CLE; :TRAC:FEED SENS1; :TRAC:FEED:CONT NEXT;")
 
         highcurrstr = ":SOUR:DELT:HIGH " + str(highcurr) + ";"
-        lowcurrstr = ":SOUR:DELT:LOW " + str(-highcurr) + ";"
+        lowcurrstr = ":SOUR:DELT:LOW " + str(lowcurr) + ";"
         deltastr = ":SOUR:DELT:DEL " + str(delta) + ";"
         swpct1str = ":SOUR:DELT:COUN " + str(swpct1) + ";"
         swpct2str = ":SOUR:SWE:COUN " + str(swpct2) + ";"
-        nplcstr = ":SYST:COMM:SER:SEND ':SENS1:VOLT:NPLC " + str(nplc) + "';"
+        nplcstr = "SYST:COMM:SER:SEND ':SENS1:VOLT:NPLC " + str(nplc) + "';"
         swpct3str = ":SYST:COMM:SER:SEND ':SENS1:VOLT:DFIL:COUN " + str(swpct3) + "';"
         rvngstr = ":SYST:COMM:SER:SEND ':SENS1:VOLT:RANG " + str(rvng) + "';"
+        #rvngstr = ":SYST:COMM:SER:SEND ':SENS1:VOLT:RANG " + 'AUTO' + "';"
+
 
     
         self.write(highcurrstr + lowcurrstr + deltastr + swpct1str + swpct2str + \
-                   nplcstr + swpct3str + rvngstr)
+                   swpct3str + rvngstr)
+                   #nplcstr + swpct3str + rvngstr)
+
 
         #print(highcurrstr + lowcurrstr + deltastr + swpct1str + swpct2str + \
         #           nplcstr + swpct3str + rvngstr)
 
         sleep(1.0)
 
+        #print('post settings', self.ask("SYST:ERR?"))
+
+
         self.write("UNIT V")
 
-        self.write("FORM:ELEM DEF")
+        #self.write("FORM:ELEM DEF") # return just reading and time stamp
+        self.write("FORM:ELEM READ,TST,UNIT,SOUR") # return all elments from list
+
 
         self.write(":TRAC:POIN " + str(measnum))
 
+
         self.write(":SOUR:DELT:ARM")
 
+        #print('post arming', self.ask("SYST:ERR?"))
+
         print("Waveform Armed")
+
+
+    def arm_preloop_delta(self, highcurr, delta, swpct1, swpct2, swpct3, \
+                          nplc, rvng, measnum):
+
+
+        self.arm_delta(highcurr, -highcurr, delta, swpct1, swpct2, swpct3, \
+                          nplc, rvng, measnum)
 
 
 
     def min_inloop_delta(self):
 
         self.write(":INIT:IMM")
-        sleep(0.1)
+        sleep(0.5)
         stop = False
+        print('postinit', self.ask("SYST:ERR?"))
+
         while stop == False:
             self.write("STAT:MEAS:EVEN?")
             measstr = self.read()
+            #print('sent and read measurement event')
             #print(measstr)
             #print('Ask', self.ask("STAT:MEAS:EVEN?"))
             bools = int_to_bool_list(int(measstr))
             #print(bools)
             stop = bools[9]
             #print(stop)
-            sleep(0.001)
+            sleep(0.2)
 
         self.write(":TRAC:DATA:TYPE?")
         self.read()
@@ -124,14 +177,81 @@ class myKeithley6221(Keithley6221):
         # might need to wait here...
         measdata = self.read()
 
-        res, resstd = meas_value(measdata)
+        volt, voltstd = meas_value(measdata)
 
         #print('Res', res, 'Ohms', resstd)
 
         #sleep(0.5)
         self.write(":TRAC:CLE")
 
-        return res
+        return volt, voltstd
+
+
+    def inloop_delta(self):
+
+        self.write(":INIT:IMM")
+        sleep(0.5)
+        stop = False
+        print('postinit', self.ask("SYST:ERR?"))
+
+        while stop == False:
+            self.write("STAT:MEAS:EVEN?")
+            measstr = self.read()
+            #print('sent and read measurement event')
+            #print(measstr)
+            #print('Ask', self.ask("STAT:MEAS:EVEN?"))
+            bools = int_to_bool_list(int(measstr))
+            #print(bools)
+            stop = bools[9]
+            #print(stop)
+            sleep(0.2)
+
+        self.write(":TRAC:DATA:TYPE?")
+        self.read()
+        self.write(":TRAC:DATA?")
+        # might need to wait here...
+        measdata = self.read()
+
+        #volt, voltstd = meas_value(measdata)
+        print('read data')
+        self.time, self.curr, self.volt = iv_meas_parse(measdata)
+
+        volt = np.mean(self.volt[155:])
+        voltstd = np.std(self.volt[155:])
+
+        #print('Res', res, 'Ohms', resstd)
+
+        #sleep(0.5)
+        self.write(":TRAC:CLE")
+
+        return volt, voltstd
+
+
+    def write_delta_file(self, temp, field, maxI):
+
+        num = 0
+        found_name = False
+        while found_name == False:
+            filename = 'IV_sweep_' + "{:.2f}".format(temp) + 'K_' + \
+                       "{:.0f}".format(field) + 'Oe_' + \
+                       "{:.2f}".format(maxI*10**6) + 'uA_' + \
+                       sweeptype + '_'+str(num) + '.txt'
+
+            if os.path.isfile(filename):
+                num += 1
+            else:
+                found_name = True
+    
+
+        data = pd.DataFrame({'Time': pd.Series(self.time), \
+                             'Current': pd.Series(self.curr), \
+                             'Voltage': pd.Series(self.volt)})                               
+
+        data = data[['Time', 'Current', 'Voltage']]
+
+        data.to_csv(filename, sep = '\t', index=False)
+        print('IV file written')
+
 
 
     def turn_off(self):
@@ -225,7 +345,7 @@ class myKeithley6221(Keithley6221):
         #self.write("SOUR:PDEL:RANG BEST")
         #self.write("SOUR:PDEL:INT 5")
         self.write("SOUR:PDEL:SWE ON")
-        #self.write("SOUR:PDEL:LME 2")
+        self.write("SOUR:PDEL:LME 2")
 
         # Configure the sweep
         self.write("SOUR:SWE:SPAC "+swp) # linear or log
@@ -321,7 +441,107 @@ class myKeithley6221(Keithley6221):
         while found_name == False:
             filename = 'IV_sweep_' + "{:.2f}".format(temp) + 'K_' + \
                        "{:.0f}".format(field) + 'Oe_' + \
-                       "{:.2f}".format(maxI/10**6) + 'uA_' + \
+                       "{:.2f}".format(maxI*10**6) + 'uA_' + \
+                       sweeptype + '_'+str(num) + '.txt'
+
+            if os.path.isfile(filename):
+                num += 1
+            else:
+                found_name = True
+    
+
+        data = pd.DataFrame({'Time': pd.Series(self.time), \
+                             'Current': pd.Series(self.curr), \
+                             'Voltage': pd.Series(self.volt)})                               
+
+        data = data[['Time', 'Current', 'Voltage']]
+
+        data.to_csv(filename, sep = '\t', index=False)
+        print('IV file written')
+
+
+    def differential_cond_setup(self, start_I, stop_I, step_I, delta_I, delay, nplc):
+        # This is based on 5-62 of the KE6221 user manual, 
+        # the differential conductance section.
+
+        # Set up instrument for sweeps
+        self.write("*RST")
+        self.write("SOUR:CURR 0.0") # Set current to zero
+        self.write("SOUR:CURR:COMP 10") # Set compliance to 10V
+
+
+        self.write("SOUR:DCON:STAR "+str(start_I))
+        self.write("SOUR:DCON:STOP "+str(stop_I))
+        self.write("SOUR:DCON:STEP "+str(step_I))
+        self.write("SOUR:DCON:DELT "+str(delta_I))
+        self.write("SOUR:DCON:DEL "+str(delay))
+        self.write("SOUR:DCON:CAB OFF") # disable compliance abort
+
+
+        self.write("syst:err?")
+        print(self.read())
+
+        self.write("UNIT V")
+        self.write("FORM:ELEM READ,TST,UNIT,SOUR")
+        #self.write("FORM:ELEM all")
+        self.write("TRAC:CLE") 
+        # Read the Operations Event Register to clear it before starting.
+        self.write("STAT:OPER:EVEN?")
+        measstr = self.read()
+        print('Oper Event reg ', measstr)
+        self.write("SOUR:DCON:ARM") # Arming sets buffer to sweep size.
+        sleep(1.5)
+        self.write("syst:err?")
+        print('After arming ', self.read())
+
+
+
+    def differential_cond_inloop(self):
+
+        self.write("INIT:IMM")
+        print('DCON initiated')
+        stop = False
+
+        sleep(0.5) # Important for this to be here, and at least 0.5s long
+
+        self.write("syst:err?")
+        print('After init', self.read())
+
+
+        print('Going into meas loop')
+        num = 0
+        while stop == False:
+
+            self.write("STAT:OPER:EVEN?")
+
+            measstr = self.read()
+
+            bools = int_to_bool_list(int(measstr))
+            stop = bools[1] # sense the bit the tells 'sweep done'
+            sleep(0.15)
+            num += 1
+
+
+        self.write("TRAC:DATA?")
+        # Don't need to wait here...
+        measdata = self.read()
+
+        print('Print Measured data', measdata)
+
+        self.time, self.curr, self.volt = iv_meas_parse(measdata)
+
+        #sleep(0.5)
+        self.write(":TRAC:CLE")
+
+
+    def write_DC_file(self, temp, field, maxI, sweeptype):
+
+        num = 0
+        found_name = False
+        while found_name == False:
+            filename = 'IV_sweep_' + "{:.2f}".format(temp) + 'K_' + \
+                       "{:.0f}".format(field) + 'Oe_' + \
+                       "{:.2f}".format(maxI*10**6) + 'uA_' + \
                        sweeptype + '_'+str(num) + '.txt'
 
             if os.path.isfile(filename):
@@ -363,7 +583,12 @@ class mySR830(SR830):
                         'lpfltsp':{"6dB/oct":0, "12dB/oct":1, "18dB/oct":2, "24dB/oct":3},\
                         'ref':{"External":0, "Internal":1},\
                         }
-        self.sensdic_inv = {v: k for k, v in self.setdic['sensty'].items()}
+        self.sensty_inv = {v: k for k, v in self.setdic['sensty'].items()}
+        self.inputconfig_inv = {v: k for k, v in self.setdic['inputconfig'].items()}
+        self.tmcnst_inv = {v: k for k, v in self.setdic['tmcnst'].items()}
+        self.lpfltsp_inv = {v: k for k, v in self.setdic['lpfltsp'].items()}
+        self.ref_inv = {v: k for k, v in self.setdic['ref'].items()}
+        self.shldgnd_inv = {v: k for k, v in self.setdic['shldgnd'].items()}
         super().__init__(resourceName)
 
 
@@ -411,6 +636,35 @@ class mySR830(SR830):
         self.write(offsstr)
         offsstr = "OEXP 3 " + str(offs)
         self.write(offsstr)
+
+
+    def get_params(self):
+
+        self.write("ISRC?")
+        value = int(self.read())
+        self.inputconfig = self.inputconfig_inv[value]
+
+        self.write("IGND?")
+        value = int(self.read())
+        self.shieldground = self.shldgnd_inv[value]
+
+        self.write("FMOD?")
+        value = int(self.read())
+        self.ref = self.ref_inv[value]
+
+        self.write("SENS?")
+        value = int(self.read())
+        self.sensty = self.sensty_inv[value]
+
+        self.write("OFLT?")
+        value = int(self.read())
+        self.tmcnst = self.tmcnst_inv[value]
+        
+        self.write("OFSL?")
+        value = int(self.read())
+        self.lpfltsp = self.lpfltsp_inv[value]
+
+
 
     
     def set_sensitivity(self, sensty):
@@ -504,7 +758,7 @@ class mySR830(SR830):
                 print(st.stdev(self.rs)/st.mean(self.rs))
                 new_guess_num = self.setdic['sensty'][self.guess] - 1
                 #print(new_guess_num)
-                self.guess = self.sensdic_inv[new_guess_num]       
+                self.guess = self.sensty_inv[new_guess_num]       
                 done = False
                 lastgood = False
                 #print('done is False')
@@ -513,7 +767,7 @@ class mySR830(SR830):
                 #print('sense too low')
                 new_guess_num = self.setdic['sensty'][self.guess] + 1
                 #print(new_guess_num)
-                self.guess = self.sensdic_inv[new_guess_num]
+                self.guess = self.sensty_inv[new_guess_num]
                 hasfail = False 
                 lastgood = True
                 #print('hasfail is False')
@@ -554,6 +808,9 @@ def main():
     #KE6221.arm_preloop_delta(1.e-6, 0.005, 10, 1, 10, 3, 10e-6, 10)
     #KE6221.min_inloop_delta()
 
+    #KE6221.arm_delta(1.e-3, 0.e-3, 1.e-3, 10, 1, 10, 4, 10, 10)
+
+    '''
     adapter2 = VISAAdapter("GPIB::8")
     LockIn = mySR830(adapter2)
 
@@ -600,6 +857,7 @@ def main():
 
     print(string, type(string[0]))
     print("Res ", string[2]/amps[-1]*np.sqrt(2), " Ohms")
+    '''
 
 
 #    KE6221.write(':OUTP:LTE OFF')

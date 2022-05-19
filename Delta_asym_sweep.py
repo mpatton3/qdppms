@@ -1,0 +1,245 @@
+# This script uses pymeasure to perform Delta measurements with strictly
+# positive current or strictly negative current. This allows comparison
+# of resistance values to extract polarity-dependent properties such as
+# spin-torque effects.
+
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import os
+from time import sleep, time
+from datetime import datetime
+import ngcmeas.current_voltage as cv
+from pymeasure.adapters import VISAAdapter
+from pymeasure.experiment import Procedure, Results, Worker
+from pymeasure.experiment import IntegerParameter, FloatParameter, Parameter
+import ngcmeas.current_voltage as cv
+import ngcmeas.switch_matrix as sm
+import MultiVu_talk_ngc as mv
+from PythonControl.parse_inputs import inputs
+
+
+
+class DeltaPolarity(Procedure):
+
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+        super().__init__()
+
+
+    iterations = IntegerParameter('Measurement Number')
+    start_temp = FloatParameter('Starting Temperature', units='K', default=300.)
+    end_temp = FloatParameter('Ending Temperature', units='K', default=300.)
+    temp_points = IntegerParameter('Number of Temp points', default = 50)
+    temp_ramp = FloatParameter('Temperature Ramp Rate', units='K/min', default=3.)
+    start_field = FloatParameter('Starting Field', units='Oe', default=0.)
+    end_field = FloatParameter('Ending Field', units='Oe', default=0.)
+    field_points = IntegerParameter('Number of Field points', default = 50)
+    field_ramp = FloatParameter('Field Ramp Rate', units='Oe/s', default=50.)
+    I_pos_max = FloatParameter('Positive Current Max', units='A', default=100.e-6)
+    I_pos_min = FloatParameter('Positive Current Min', units='A', default=0.e-6)
+    I_neg_max = FloatParameter('Negative Current Max', units='A', default=100.e-6)
+    I_neg_min = FloatParameter('Negative Current Min', units='A', default=0.e-6)
+    delay = FloatParameter('Delay', units='s', default=1.e-3)
+    nplc = IntegerParameter('Num Power Line Cycles', default=3)
+    swpct1 = IntegerParameter('Sweep Count 1', default=10) # num delta readings
+    swpct2 = IntegerParameter('Sweep Count 2', default=1) # num sweeps
+    swpct3 = IntegerParameter('Digital Filter Count', default=10) # filter number
+    rvng = FloatParameter('Voltmeter Range', default=1.e-5)
+    date = Parameter('Date Time', default='')
+    num_meas = IntegerParameter('Number of IV sweeps to take at each point', default=1)
+
+    DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'V+ 1', 'V+ 1 std', 'V+ 2', \
+                    'V+ 2 std', 'V- 1', 'V- 1 std', 'V- 2', 'V- 2 std']
+  
+
+    def startup(self):
+
+
+        print('Starting Up')
+        KE6221adapter = VISAAdapter("GPIB0::12")
+        KE7001adapter = VISAAdapter("GPIB0::7")
+        print('adapters done')
+        self.currentsource = cv.myKeithley6221(KE6221adapter)
+        self.switch = sm.Keithley7001(KE7001adapter, "SwitchMatrix")
+        print('instruments mapped')
+        self.currentsource.reset() 
+        #self.currentsource.arm_preloop_delta(self.start_I, \
+        #        self.stop_I, self.step_I, self.delta_I, self.delay, \
+        #        self.nplc)
+    
+        self.starttime = time()
+        print('Done Startup')
+
+        # Generate Temp list for measurement
+
+        self.temp_to_meas = np.linspace(self.start_temp, self.end_temp, self.temp_points)
+        self.field_to_meas = np.linspace(self.start_field, self.end_field, self.field_points)
+        #print(self.field_to_meas)
+        sleep(0.1)
+
+
+    def execute(self):
+
+        self.stable_field = r'"Holding (Driven)"'
+        self.stable_temp = r'"Stable"' 
+
+        #for tmpmes in self.temp_to_meas:
+        for fldmes in self.field_to_meas:
+
+            '''
+            # For changing temp
+            mv.set_temp(self.host, self.port, tmpmes, self.temp_ramp)
+
+            print('going to '+str(tmpmes)+'K now')
+            '''
+
+            # For changing field
+            mv.set_field(self.host, self.port, fldmes, self.field_ramp)
+            print('going to '+str(fldmes)+'Oe now')
+            sleep(1.8)
+
+            field_stable = False
+            temp_stable = False
+            #temp_stable = True
+
+
+            # Wait for Temperature and Field to stabilize 
+            while not (field_stable and temp_stable):
+                b = mv.query_field(self.host, self.port)
+                t = mv.query_temp(self.host, self.port)
+
+                field_stable = b[1] == self.stable_field
+                temp_stable = t[1] == self.stable_temp
+                sleep(0.1)
+
+            self.temp = t[0]
+            self.field = b[0]
+
+            print('Out of while loop and field ', b[0], ' temp ', t[0])
+            tim = time() - self.starttime
+            
+            for i in range(self.num_meas):
+                
+                print(i, 'th measurement')
+                voltp1, voltp1std = self.run_one_delta(polarity = 'positive')
+                voltn1, voltn1std = self.run_one_delta(polarity = 'negative')
+                voltp2, voltp2std = self.run_one_delta(polarity = 'positive')
+                voltn2, voltn2std = self.run_one_delta(polarity = 'negative')
+
+ 
+                self.emit('results', {
+                    'Time': tim,\
+                    'Temperature': t[0],\
+                    '\g(m)\-(0)H': b[0],\
+                    'V+ 1': voltp1, \
+                    'V+ 1 std': voltp1std, \
+                    'V+ 2': voltp2, \
+                    'V+ 2 std': voltp2std, \
+                    'V- 1': voltn1, \
+                    'V- 1 std': voltn1std, \
+                    'V- 2': voltn2, \
+                    'V- 2 std': voltn2std \
+                    })
+
+            print('Done Emitting')
+
+
+        self.currentsource.write("SOUR:SWE:ABOR")
+        print('Done with Temps')
+
+
+    def run_one_delta(self, polarity = 'positive'):
+
+        measstart = time()
+
+        if polarity == 'positive':
+
+            print('in run one delta, positive')
+            #print(self.currentsource.ask('syst:err?'))
+
+            self.currentsource.arm_delta(self.I_pos_max, \
+                self.I_pos_min, self.delay, self.swpct1, self.swpct2,\
+                self.swpct3, self.nplc, self.rvng, self.swpct1)
+            sleep(0.1)
+            print('armed')
+
+        if polarity == 'negative':
+
+            print('in run one delta, negative')
+ 
+            self.currentsource.arm_delta(self.I_neg_max, \
+                self.I_neg_min, self.delay, self.swpct1, self.swpct2,\
+                self.swpct3, self.nplc, self.rvng, self.swpct1)
+            sleep(0.1)
+
+
+        volt, voltstd = self.currentsource.inloop_delta()
+        self.currentsource.write_IV_file(self.temp, self.field, self.I_pos_max, polarity)
+
+        meas_time = time() - measstart
+        print('Delta time to run ', meas_time)
+
+        return volt, voltstd
+
+
+def main():
+
+    host = "128.104.184.130"
+    port = 5000
+
+    now = datetime.now()
+
+    # Start editing
+    directory = r'C:\Users\maglab\Documents\Python Scripts\data\BPBO\B015\30K_Delta\from15kOe\sweep_2'
+    os.chdir(directory)
+    data_filename = 'Delta_asym_11mA_30K_15kOe_-2.5kOe_90deg_B015_0.csv'
+
+
+    '''
+    setpoint = 10000 # max B in Oe
+    ramprate = 100   # field ramp in Oe/sec
+    '''
+    procedure = DeltaPolarity(host, port)
+    
+    procedure.iterations = 1
+    procedure.start_temp = 300. # Kelvin
+    procedure.end_temp =  300. # Kelvin
+    procedure.temp_points = 2 # number of temp points 
+    procedure.temp_ramp = 5 # Kelvin/min
+    procedure.start_field = 2500. # Oe
+    procedure.end_field = -2500. # Oe
+    procedure.field_points = 26 # number of field points
+    procedure.field_ramp = 100. # Oe/sec
+    procedure.I_pos_max = 11.e-3 # Amps
+    procedure.I_pos_min = 0.e-3 # Amps
+    procedure.I_neg_max = -11.e-3 # Amps
+    procedure.I_neg_min = 0.e-3 # Amps
+    procedure.delay = 1.e-3 # seconds
+    procedure.nplc = 1 # number power line cycles, select either 1 or 5
+    procedure.swpct1 = 450 # number of delta points
+    procedure.swpct2 = 1 # something?
+    procedure.swpct3 = 1 # filter 
+    procedure.rvng = 10.e0 # Voltmeter range
+    procedure.date = now.strftime("%m/%d/%Y, %H:%M:%S")
+    procedure.num_meas = 2 # number of measurements to take at each temp/field
+
+
+
+    # use Pymeasure to run the experiment
+    results = Results(procedure, data_filename)
+
+
+    worker = Worker(results)
+    print('Starting worker to run Measurement')
+    worker.start()
+
+    worker.join(timeout=120) # wait at most 2 min
+
+
+
+
+if __name__ == "__main__":
+    main()

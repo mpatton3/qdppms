@@ -139,26 +139,15 @@ def set_field(host, port, field, rate):
 
     reply = sock.recv(128).decode('utf-8')
 
-    #print('command send reply ', reply)
-    #time.sleep(0.1)
-    # Receive Temperature
-    #reply = sock.recv(128).decode('utf-8').split(',')
-
     # Disconnect from Socket Server
     sock.sendall(b'close\r')
     clrp = sock.recv(128).decode('utf-8')
 
     time.sleep(0.1)   # min wait time to not disconnect telnet port.
 
-    #print('second', reply)
-
-    #temp = float(reply[1])
-    #print(temp, temp+1.2)
-
-    #return temp
-
-
-
+    # Wait 1.8 seconds after setting this before asking if the field
+    # is stable, b/c that is the PPMS cryostat response time to start
+    # ramping the field.
 
 
 def main():

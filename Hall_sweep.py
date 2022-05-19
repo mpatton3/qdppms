@@ -89,9 +89,9 @@ class HallSweep(Procedure):
 
         sleep(0.36)
 
-        res = self.currentsource.min_inloop_delta()
+        volt, vstd = self.currentsource.min_inloop_delta()
         self.switch.open_all()
-        return res/self.high_current
+        return volt/self.high_current
 
 
 
@@ -357,7 +357,7 @@ def main():
     procedure.swpct1 = 10
     procedure.swpct2 = 1
     procedure.swpct2 = 1
-    procedure.sswpct3 = 10
+    procedure.swpct3 = 10
     procedure.nplc = 3
     procedure.rvng = 1.e1
     now = datetime.now()

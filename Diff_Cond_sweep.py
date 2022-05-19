@@ -1,12 +1,9 @@
-# This script uses Pymeasure to run IV sweeps at set temps and fields
-# as the user prescribes. The individual IV curves are saved in the directory,
-# and summary parameters are saved in they PyMeasure results-based datafile.
-# As a result, a new directory for every measurement is recommended.
-
+# This script runs Differential conductance measurements using pymeasure.
 
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import os
 from time import sleep, time
 from datetime import datetime
@@ -20,12 +17,14 @@ import MultiVu_talk_ngc as mv
 from PythonControl.parse_inputs import inputs
 
 
-class IVSweep(Procedure):
+
+class DifCndSweep(Procedure):
 
     def __init__(self, host, port):
         self.host = host
         self.port = port
         super().__init__()
+
 
     iterations = IntegerParameter('Measurement Number')
     start_temp = FloatParameter('Starting Temperature', units='K', default=300.)
@@ -36,11 +35,13 @@ class IVSweep(Procedure):
     end_field = FloatParameter('Ending Field', units='Oe', default=0.)
     field_points = IntegerParameter('Number of Field points', default = 50)
     field_ramp = FloatParameter('Field Ramp Rate', units='Oe/s', default=50.)
-    max_current = FloatParameter('Max Current', units='A', default=1.e-6)
-    delay = FloatParameter('Delay', units='s', default=100.e-3)
-    nplc = IntegerParameter('Num Power Line Cycles', default=3) #not used?
+    start_I = FloatParameter('Max Current', units='A', default=0.e-6)
+    stop_I = FloatParameter('Max Current', units='A', default=100.e-6)
+    step_I = FloatParameter('Max Current', units='A', default=5.e-6)
+    delta_I = FloatParameter('Max Current', units='A', default=3.e-6)
+    delay = FloatParameter('Delay', units='s', default=1.e-3)
+    nplc = IntegerParameter('Num Power Line Cycles', default=3)
     date = Parameter('Date Time', default='')
-    numberpoints = IntegerParameter('IV points 0 to maxI', default=10)
     num_IV = IntegerParameter('Number of IV sweeps to take at each point', default=1)
     sweep_type = Parameter('linear or log', default = 'linear')
     pulse_width = FloatParameter('Pulse Width', units='s', default=400.e-6)
@@ -60,9 +61,9 @@ class IVSweep(Procedure):
         self.switch = sm.Keithley7001(KE7001adapter, "SwitchMatrix")
         print('instruments mapped')
         self.currentsource.reset() 
-        self.currentsource.current_sweep_setup(self.max_current, \
-                self.numberpoints, self.sweep_type, self.delay, \
-                self.nplc, self.pulse_width)
+        self.currentsource.differential_cond_setup(self.start_I, \
+                self.stop_I, self.step_I, self.delta_I, self.delay, \
+                self.nplc)
     
         self.starttime = time()
         print('Done Startup')
@@ -99,15 +100,13 @@ class IVSweep(Procedure):
 
             field_stable = False
             temp_stable = False
-            temp_stable = True
-
 
             while not (field_stable and temp_stable):
                 b = mv.query_field(self.host, self.port)
                 t = mv.query_temp(self.host, self.port)
 
                 field_stable = b[1] == self.stable_field
-                #temp_stable = t[1] == self.stable_temp
+                temp_stable = t[1] == self.stable_temp
                 #print(field_stable, temp_stable)
                 #print((field_stable and temp_stable))
                 #print((field_stable or temp_stable))
@@ -119,11 +118,11 @@ class IVSweep(Procedure):
             
             for i in range(self.num_IV):
                 measstart = time()
-                self.currentsource.current_sweep_inloop()
+                self.currentsource.differential_cond_inloop()
                 meas_time = time() - measstart
                 print('IV time to run ', meas_time)
-                self.currentsource.write_IV_file(t[0], b[0], self.max_current,\
-                                         self.sweep_type)
+                self.currentsource.write_IV_file(t[0], b[0], self.stop_I,\
+                                         'linear')
 
                 res, nonlin = self.currentsource.IV_compute_res()
                 self.emit('results', {
@@ -137,7 +136,9 @@ class IVSweep(Procedure):
                 print('Done Emitting')
 
 
+        self.currentsource.write("SOUR:SWE:ABOR")
         print('Done with Temps')
+
 
 
 def main():
@@ -145,30 +146,33 @@ def main():
     host = "128.104.184.130"
     port = 5000
 
-    now = datetime.now()
 
     # Start editing
-    directory = r'C:\Users\maglab\Documents\Python Scripts\data\BPBO\B015\5K_check'
+    directory = r'C:\Users\maglab\Documents\Python Scripts\data\BPBO\B015\10K_check\dc_test'
     os.chdir(directory)
-    data_filename = 'IVsweeps_18mA_5K_3kOe_-3kOe_90deg_B015_0.csv'
+    data_filename = 'DCsweeps_12mA_10K_3kOe_3kOe_90deg_B015_0.csv'
 
 
     '''
     setpoint = 10000 # max B in Oe
     ramprate = 100   # field ramp in Oe/sec
     '''
-    procedure = IVSweep(host, port)
+    procedure = DifCndSweep(host, port)
     
 
     procedure.iterations = 1
-    procedure.max_current = 18000.0e-6 # Amps
-    procedure.numberpoints = 101 # in IV sweep
-    procedure.num_IV = 16 # Number of IV sweeps at each point
-    procedure.start_temp = 5. # K
-    procedure.end_temp = 5. # K
+    procedure.start_I = -500.0e-6 # Amps
+    procedure.stop_I = 500.0e-6 # Amps
+    procedure.step_I = 10.0e-6 # Amps
+    procedure.delta_I = 15.0e-6 # Amps
+    procedure.delay = 1.0e-3 # seconds
+    procedure.nplc = 3 # power line cycles
+    procedure.num_IV = 1 # Number of IV sweeps at each point
+    procedure.start_temp = 10. # K
+    procedure.end_temp = 10. # K
     procedure.temp_points = 9 # in Temp sweep
     procedure.temp_ramp = 3. # K/min ramp rate
-    procedure.start_field = -3000. # K
+    procedure.start_field = 3000. # K
     procedure.end_field = 3000. # K
     procedure.field_points = 2 # in Temp sweep
     procedure.field_ramp = 95. # K/min ramp rate
@@ -176,23 +180,33 @@ def main():
 
     procedure.delay = 1.e-1
     procedure.nplc = 3
-    procedure.date = now.strftime("%m/%d/%Y, %H:%M:%S")
 
     procedure.sweep_type = 'linear'
     procedure.pulse_width = 11000e-6
     procedure.rvng = 1.e1
+    now = datetime.now()
 
     results = Results(procedure, data_filename)
 
     worker = Worker(results)
-    print('Starting worker to run Hall Sweep')
+    print('Starting worker to run Measurement')
     worker.start()
 
     worker.join(timeout=120) # wait at most 2 min
 
-    #'''
 
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
+
+
+
+
+
+
+
+
+
+
 

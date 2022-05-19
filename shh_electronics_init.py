@@ -36,25 +36,34 @@ def main():
     adapter2 = VISAAdapter("GPIB::8")
     LockIn = cv.mySR830(adapter2)
 
-    directory = r'C:\Users\maglab\Documents\Python Scripts\data\BPBO\B015\test'
+    directory = r'C:\Users\maglab\Documents\Python Scripts\data\BPBO\B015\test\2.5K'
     os.chdir(directory)
 
     # Current Source parameters
-    amplitude = 1.e-3 # Amps
+    amplitude = 10.e-3 # Amps
     frequency = 587.37 # Hz
     offset = 0.0 # Amps
 
     turnon = True
     turnoff = False
 
+    KE6221.current_wave_set(amplitude, frequency, offset, False, True)
+
+    sleep(3.0) 
+    
+    KE6221.current_wave_set(amplitude, frequency, offset, turnon, turnoff)
+
+
     xs = []
     ys = []
     ovlds = []
-    LockIn.set_sensitivity("1mV/nA")
-    LockIn.set_time_constant("3ms")
-    LockIn.set_harmonic(1)
+    LockIn.set_harmonic(2)
+    sleep(2.0)
+    LockIn.set_sensitivity("1uV/pA")
+    LockIn.set_time_constant("300ms")
+    LockIn.get_params()
+    sleep(3.0)
     print(LockIn.query_ovld())
-    KE6221.current_wave_set(amplitude, frequency, offset, turnon, turnoff)
     #'''
     for i in range(100):
         resp = LockIn.query_ovld()
@@ -66,7 +75,7 @@ def main():
         sleep(0.05)
 
 
-    LockIn.set_time_constant("1ms")
+    LockIn.set_time_constant("100ms")
     sleep(1.0)
     
     for i in range(100):
@@ -87,13 +96,14 @@ def main():
     print(LockIn.query_ovld())
     print(LockIn.query_ovld())
     
-    plt.plot(xs)
+    plt.plot(xs, 'b-')
+    #plt.plot(ys, 'g-')
     plt.show()
     data = pd.DataFrame({'xs': pd.Series(xs), \
                          'ys': pd.Series(ys), \
                          'ovlds': pd.Series(ovlds)})
 
-    data.to_csv('test2.txt', sep = "\t", index=False)
+    data.to_csv('test_2w.txt', sep = "\t", index=False)
 
 
 
