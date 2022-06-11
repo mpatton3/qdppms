@@ -9,6 +9,7 @@ import os
 import glob
 from scipy.optimize import curve_fit
 import re
+import utensils.re_value as ur
 
 
 def find_line(fn, strng):

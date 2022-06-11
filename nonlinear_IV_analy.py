@@ -67,19 +67,35 @@ def voltage_difference(dfpos, dfneg):
     return data_diff
 
 
+class IV_curve:
+
+    def __init__(self, max_I, temp, field, data):
+        
+        self.max_I = max_I
+        self.temp = temp
+        self.field = field
+        self.data = data
+
+    def get_resistance(self):
+
+
+        
+
 
 def main():
 
 
-    directory = r'R:\Lab Member Files\Tony Edgeton\Raw Data\Transport\PPMS\B015\5K_check\3kOe_avg'
+    directory = (r'R:\Lab Member Files\Tony Edgeton\Raw Data\Transport\PPMS'
+                 r'\B015\220606\0deg\200K_from10kOe\highH\IVs\down')
 
     os.chdir(directory)
 
 
-    flneg = glob.glob('IV_sweep*_-3000Oe_18*.txt')
+    flneg = glob.glob('IV_sweep*_1000Oe_11*.txt')
     flzer = glob.glob('IV_sweep*_0Oe_*.txt')
-    flpos = glob.glob('IV_sweep*_3000Oe_18*.txt')
+    flpos = glob.glob('IV_sweep*_2000Oe_11*.txt')
 
+    #print(flneg)
 
     dataneg = []
     for f in flneg:
@@ -98,13 +114,23 @@ def main():
 
     print(dataneg[0].iloc[0,1], dataneg[0].iloc[1,1])
 
-    dataneg_avg = average_voltages(dataneg)
+    dataneg_avg = average_voltages(dataneg[1:])
     #datazer_avg = average_voltages(datazer)
-    datapos_avg = average_voltages(datapos)
+    datapos_avg = average_voltages(datapos[1:])
+
+    params = linregress(dataneg_avg['Current'], dataneg_avg['Voltage'])
+    linsub = dataneg_avg['Voltage'] - params[0]*dataneg_avg['Current']
+
+    plt.plot(dataneg_avg.iloc[:,0], linsub)
+
+    plt.show()
+
+    
 
 
 
-
+    '''
+    # Code to subtract IVs from opposite field polarities
     data_diff = datapos_avg.loc[:,'Voltage'] - dataneg_avg.loc[:,'Voltage']
     print(type(data_diff))
     data_diff = pd.DataFrame({'Current': dataneg[0].loc[:,'Current'], \
@@ -129,6 +155,7 @@ def main():
     plt.plot(data_diff_avg['Current'], data_diff_avg['V diff - lin'], 'g')
     plt.show()
  
+    '''
 
 
 
