@@ -45,10 +45,12 @@ class HallSweep(Procedure):
 
     #DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R bridge 1', \
     #              'R bridge 2', 'R bridge 3', 'R bridge 4']
+    DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R bridge 1']
 
-    DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R vdp 1', \
-                    'R vdp 2', 'R Hall 1', 'R Hall 2', 'R vdp 12', \
-                    'R vdp 22', 'R Hall 12', 'R Hall 22']
+
+    #DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R vdp 1', \
+    #                'R vdp 2', 'R Hall 1', 'R Hall 2', 'R vdp 12', \
+    #                'R vdp 22', 'R Hall 12', 'R Hall 22']
 
 
     #DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R bridge 1', \
@@ -79,7 +81,7 @@ class HallSweep(Procedure):
         if config == 'c2':
             self.switch.clos_custom2()
         if config == 'cust1':
-            self.switch.clos_custom(5, 2, 7, 8) #5, 1, 6, 2
+            self.switch.clos_custom(4, 3, 5, 1) #5, 1, 6, 2
         if config == 'cust2':
             self.switch.clos_custom(5, 2, 3, 7)
         if config == 'cust3':
@@ -128,6 +130,7 @@ class HallSweep(Procedure):
 
 
         # This is where comment starts for bridges
+        '''
         for c in configs:
 
             ress.append(self.resistance_measure(c))
@@ -165,14 +168,14 @@ class HallSweep(Procedure):
             'Temperature': temp, \
             '\g(m)\-(0)H': bfield[0], \
             #'\g(phi)': self.angle,\
-            'R bridge 1': ress[0], \
-            'R bridge 2': ress[1], \
-            'R bridge 3': ress[2],\
-            'R bridge 4': ress[3]
+            'R bridge 1': ress[0]
+            #'R bridge 2': ress[1], \
+            #'R bridge 3': ress[2],\
+            #'R bridge 4': ress[3]
             })
         sleep(0.01)
 
-        '''
+        
         # Comment with 3 commas above for other config
 
         print('done emitting')
@@ -188,9 +191,9 @@ class HallSweep(Procedure):
         rate = self.ramprate
         self.switch.set_pins2(7,5,6,8)
         print('set all pins')
-        configs = ['vdp1', 'vdp2', 'Hall1', 'Hall2', 'vdp12', 'vdp22', 'Hall12', 'Hall22']
+        #configs = ['vdp1', 'vdp2', 'Hall1', 'Hall2', 'vdp12', 'vdp22', 'Hall12', 'Hall22']
         #configs = ['c1', 'c2']
-        #configs = ['cust1', 'cust2', 'cust3', 'cust4']
+        configs = ['cust1']#, 'cust2', 'cust3', 'cust4']
 
         ress = []
         ts = []
@@ -341,9 +344,9 @@ def main():
 
 
     #start editing
-    directory = r'C:\Users\maglab\Documents\Python Scripts\data\KTO\jk167'
+    directory = r'C:\Users\maglab\Documents\Python Scripts\data\BPBO\B015\220718'
     os.chdir(directory)
-    data_filename = 'rho_v_B_50K_1T_KTO_jk167_0.csv'
+    data_filename = 'rho_v_B_300K_0.5T_B015_0.csv'
 
 
     setpoint = 10000 # max B in Oe
@@ -351,7 +354,7 @@ def main():
     procedure = HallSweep(host, port, setpoint, ramprate)
 
     procedure.iterations = 1
-    procedure.high_current = 5.0e-6 # Amps
+    procedure.high_current = 50.0e-6 # Amps
     # Stop editing
     procedure.delta = 1.e-3
     procedure.swpct1 = 10

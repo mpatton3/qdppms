@@ -4,6 +4,8 @@
 # Specifically, we separate the arming from a 'do one measurement'
 # to allow for easy in-loop measurement.
 
+# Search for 'FORM:ELEM' and check the correct one is chosen.
+
 
 import numpy as np
 import pandas as pd
@@ -56,6 +58,8 @@ def iv_meas_parse(measstr):
     volt = [numbers[volt_ind[i]] for i in range(points)]
     time = [numbers[time_ind[i]] for i in range(points)]
     curr = [numbers[curr_ind[i]] for i in range(points)]
+
+    print('Big string split')
 
     #print(volt)
     #print(time)
@@ -169,13 +173,14 @@ class myKeithley6221(Keithley6221):
             #print(bools)
             stop = bools[9]
             #print(stop)
-            sleep(0.2)
+            sleep(0.9)
 
         self.write(":TRAC:DATA:TYPE?")
         self.read()
         self.write(":TRAC:DATA?")
         # might need to wait here...
         measdata = self.read()
+
 
         volt, voltstd = meas_value(measdata)
 
@@ -184,6 +189,7 @@ class myKeithley6221(Keithley6221):
         #sleep(0.5)
         self.write(":TRAC:CLE")
 
+        print('made it herer!')
         return volt, voltstd
 
 
@@ -216,8 +222,8 @@ class myKeithley6221(Keithley6221):
         print('read data')
         self.time, self.curr, self.volt = iv_meas_parse(measdata)
 
-        volt = np.mean(self.volt[155:])
-        voltstd = np.std(self.volt[155:])
+        volt = np.mean(self.volt[-30:])
+        voltstd = np.std(self.volt[-30:])
 
         #print('Res', res, 'Ohms', resstd)
 
@@ -233,7 +239,7 @@ class myKeithley6221(Keithley6221):
         found_name = False
         while found_name == False:
             filename = 'IV_sweep_' + "{:.2f}".format(temp) + 'K_' + \
-                       "{:.0f}".format(field) + 'Oe_' + \
+                       "{:.0f}".format(round(field/10.)*10) + 'Oe_' + \
                        "{:.2f}".format(maxI*10**6) + 'uA_' + \
                        sweeptype + '_'+str(num) + '.txt'
 
@@ -434,14 +440,16 @@ class myKeithley6221(Keithley6221):
         return p[0], nonlin
 
     
-    def write_IV_file(self, temp, field, maxI, sweeptype):
+    def write_IV_file(self, temp, field, maxI, angle, sweeptype):
 
+        
         num = 0
         found_name = False
         while found_name == False:
-            filename = 'IV_sweep_' + "{:.2f}".format(temp) + 'K_' + \
-                       "{:.0f}".format(field) + 'Oe_' + \
+            filename = 'IV_sweep_' + "{:.0f}".format(temp) + 'K_' + \
+                       "{:.0f}".format(round(field)) + 'Oe_' + \
                        "{:.2f}".format(maxI*10**6) + 'uA_' + \
+                       "{:.0f}".format(angle) + 'deg_' + \
                        sweeptype + '_'+str(num) + '.txt'
 
             if os.path.isfile(filename):
@@ -449,7 +457,6 @@ class myKeithley6221(Keithley6221):
             else:
                 found_name = True
     
-
         data = pd.DataFrame({'Time': pd.Series(self.time), \
                              'Current': pd.Series(self.curr), \
                              'Voltage': pd.Series(self.volt)})                               

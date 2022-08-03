@@ -228,8 +228,8 @@ def main():
     procedure.end_temp =  300. # Kelvin
     procedure.temp_points = 2 # number of temp points 
     procedure.temp_ramp = 5 # Kelvin/min
-    procedure.start_field = 000. # Oe
-    procedure.end_field = 000. # Oe
+    procedure.start_field = 10000. # Oe
+    procedure.end_field = 10000. # Oe
     procedure.field_points = 1 # number of field points
     procedure.field_ramp = 20. # Oe/sec
     procedure.I_pos_max = 10.e-3 # Amps this should not be zero.

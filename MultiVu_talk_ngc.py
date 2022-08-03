@@ -173,10 +173,10 @@ def main():
     #print(query_field(host, port))
 
 
-    set_temp(host, port, 2.0, 13.5)
+    set_temp(host, port, 200.0, 13.5)
     #time.sleep(0.013)   # min wait time to not disconnect telnet port.
     #time.sleep(0.3)
-    set_field(host, port, 0000.0, 100.0)
+    set_field(host, port, 4500.0, 100.0)
     #time.sleep(0.3)
     #set_temp(host, port, 300.0, 3.5)
 
