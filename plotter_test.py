@@ -52,7 +52,7 @@ def main():
     procedure.iterations = 100
 
     data_filename = 'random.csv'
-    log.info("Construction the Results with a data file: %s" % data_filename)
+    log.info("Constructing the Results with a data file: %s" % data_filename)
     results = Results(procedure, data_filename)
 
     log.info("Constructing the Plotter")
