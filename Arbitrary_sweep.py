@@ -6,8 +6,9 @@
 
 import numpy as np
 import pandas as pd
+import logging
 #import matplotlib.pyplot as plt
-log - logging.getLogger(__name___
+log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 
@@ -18,6 +19,7 @@ from time import sleep, time
 from datetime import datetime
 from pymeasure.log import console_log
 from pymeasure.display.Qt import QtGui
+#from PyQt5.QtWidgets import QApplication
 from pymeasure.display.windows import ManagedWindow
 from pymeasure.display import Plotter
 from pymeasure.adapters import VISAAdapter
@@ -29,12 +31,15 @@ import ngcmeas.switch_matrix as sm
 import MultiVu_talk_ngc as mv
 from PythonControl.parse_inputs import inputs
 
+host = "128.104.184.130"
+port = 5000
+
 
 class TransportMeas(Procedure):
 
-    def __init__(self, host, port):
-        self.host = host
-        self.port = port
+    def __init__(self):
+        #self.host = host
+        #self.port = port
         #self.meastype = meastype
         #self.tempset = tempset
         #self.maxb = maxb
@@ -56,17 +61,23 @@ class TransportMeas(Procedure):
     fieldramp = FloatParameter('Magnetic Field Ramp Rate', default=100.)
     pinconfig = Parameter('Pin Configuration', default='1vdP')
 
-    if self.pinconfig == '1vdP':
-        DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R vdp 1', \
+    DATA_COLUMNS = ['Time', 'Temperature'] # Had to have something here with no logic in order 
+                                    # for MainWindow def__init__ line to work
+
+    #if self.pinconfig == '1vdP':
+    if pinconfig == '1vdP':
+       DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R vdp 1', \
                         'R vdp 2', 'R Hall 1', 'R Hall 2']
 
-    if self.pinconfig == '2vdP':
-        DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R vdp 1', \
+    #if self.pinconfig == '2vdP':
+    if pinconfig == '2vdP':
+       DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R vdp 1', \
                         'R vdp 2', 'R Hall 1', 'R Hall 2', 'R vdp 12', \
                         'R vdp 22', 'R Hall 12', 'R Hall 22']
 
-    if self.pinconfig == '2bridge':
-        DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R bridge 1', \
+    #if self.pinconfig == '2bridge':
+    if pinconfig == '2bridge':
+       DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R bridge 1', \
                         'R bridge 2']
 
 
@@ -146,7 +157,7 @@ class TransportMeas(Procedure):
         #for i in range(self.iterations):
 
         if self.meastype == 'Hall':
-            mv.set_field(self.host, self.port, self.maxfield, self.fieldramp)
+            mv.set_field(host, port, self.maxfield, self.fieldramp)
             sleep(1.8)
             bfld = 0.
             done = False
@@ -163,7 +174,7 @@ class TransportMeas(Procedure):
 
                 print(bfield[1], done)
 
-            mv.set_field(self.host, self.port, -self.maxfield, self.fieldramp)
+            mv.set_field(host, port, -self.maxfield, self.fieldramp)
             sleep(1.8)
 
             done = False
@@ -180,7 +191,7 @@ class TransportMeas(Procedure):
 
 
             print('About to set field to zero.')
-            mv.set_field(self.host, self.port, 0.0, self.fieldramp)
+            mv.set_field(host, port, 0.0, self.fieldramp)
             sleep(1.8)
         
             done = False
@@ -197,8 +208,8 @@ class TransportMeas(Procedure):
                 print(bfield[1], done)
 
 
-        if self.meastype = 'Temp':
-            mv.set_temp(self.host, self.port, self.tempset, self.ramprate)
+        if self.meastype == 'Temp':
+            mv.set_temp(host, port, self.tempset, self.ramprate)
             sleep(1.6)
             bfld = 0.
             done = False
@@ -220,8 +231,8 @@ class TransportMeas(Procedure):
 
         ress = []
         # get_temp and get_field from Dynacool
-        temp = mv.query_temp(self.host, self.port)[0]
-        bfield = mv.query_field(self.host, self.port)
+        temp = mv.query_temp(host, port)[0]
+        bfield = mv.query_field(host, port)
         print(bfield)
         tim = time() - self.starttime
 
@@ -235,47 +246,47 @@ class TransportMeas(Procedure):
 
         print('about to emit', tim)
 
-    if self.pinconfig == '1vdP':
+        if self.pinconfig == '1vdP':
 
-        self.emit('results', {
-            'Time': tim, \
-            'Temperature': temp, \
-            '\g(m)\-(0)H': bfield[0], \
-            'R vdp 1': ress[0], \
-            'R vdp 2': ress[1], \
-            'R Hall 1': ress[2], \
-            'R Hall 2': ress[3], \
-            })
+            self.emit('results', {
+                'Time': tim, \
+                'Temperature': temp, \
+                '\g(m)\-(0)H': bfield[0], \
+                'R vdp 1': ress[0], \
+                'R vdp 2': ress[1], \
+                'R Hall 1': ress[2], \
+                'R Hall 2': ress[3], \
+                })
 
 
-    if self.pinconfig == '2vdP':
-        DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R vdp 1', \
-                        'R vdp 2', 'R Hall 1', 'R Hall 2', 'R vdp 12', \
-                        'R vdp 22', 'R Hall 12', 'R Hall 22']
-        self.emit('results', {
-            'Time': tim, \
-            'Temperature': temp, \
-            '\g(m)\-(0)H': bfield[0], \
-            'R vdp 1': ress[0], \
-            'R vdp 2': ress[1], \
-            'R Hall 1': ress[2], \
-            'R Hall 2': ress[3], \
-            'R vdp 12': ress[4], \
-            'R vdp 22': ress[5], \
-            'R Hall 12': ress[6], \
-            'R Hall 22': ress[7], \
-            })
- 
-    if self.pinconfig == '2bridge':
-        DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R bridge 1', \
-                        'R bridge 2']
-        self.emit('results', {
-            'Time': tim, \
-            'Temperature': temp, \
-            '\g(m)\-(0)H': bfield[0], \
-            'R bridge 1': ress[0], \
-            'R bridge 2': ress[1], \
-            })
+        if self.pinconfig == '2vdP':
+            DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R vdp 1', \
+                            'R vdp 2', 'R Hall 1', 'R Hall 2', 'R vdp 12', \
+                            'R vdp 22', 'R Hall 12', 'R Hall 22']
+            self.emit('results', {
+                'Time': tim, \
+                'Temperature': temp, \
+                '\g(m)\-(0)H': bfield[0], \
+                'R vdp 1': ress[0], \
+                'R vdp 2': ress[1], \
+                'R Hall 1': ress[2], \
+                'R Hall 2': ress[3], \
+                'R vdp 12': ress[4], \
+                'R vdp 22': ress[5], \
+                'R Hall 12': ress[6], \
+                'R Hall 22': ress[7], \
+                })
+     
+        if self.pinconfig == '2bridge':
+            DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R bridge 1', \
+                            'R bridge 2']
+            self.emit('results', {
+                'Time': tim, \
+                'Temperature': temp, \
+                '\g(m)\-(0)H': bfield[0], \
+                'R bridge 1': ress[0], \
+                'R bridge 2': ress[1], \
+                })
  
 
         sleep(0.01)
@@ -309,8 +320,9 @@ class TransportMeas(Procedure):
 class MainWindow(ManagedWindow):
 
     def __init__(self):
-        super(MainWindow, self).__init__(
-            procedure_class=RandomProcedure,
+        #super(MainWindow, self).__init__(
+        super().__init__(
+            procedure_class = TransportMeas(),
             inputs=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
                     'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
                     'tempramp', 'maxfield', 'fieldramp', 'pinconfig'],
@@ -318,14 +330,14 @@ class MainWindow(ManagedWindow):
                     'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
                     'tempramp', 'maxfield', 'fieldramp', 'pinconfig'],
             x_axis='Iteration',
-            y_axis='high_current',
-            directory_input=True,
-            sequencer=True,
-            sequencer_inputs=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
-                    'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
-                    'tempramp', 'maxfield', 'fieldramp', 'pinconfig'],
+            y_axis='high_current') #,
+            #directory_input=True,
+            #sequencer=True,
+            #sequencer_inputs=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
+            #        'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
+            #        'tempramp', 'maxfield', 'fieldramp', 'pinconfig'],
             #sequence_file="gui_sequencer_example_sequence.txt"
-        )
+        #)
         self.setWindowTitle('GUI Example')
 
     def queue(self, procedure=None):
@@ -348,9 +360,9 @@ class MainWindow(ManagedWindow):
 
 class HallSweep(Procedure):
 
-    def __init__(self, host, port, maxb):
-        self.host = host
-        self.port = port
+    def __init__(port, maxb):
+        #self.host = host
+        #self.port = port
         self.maxb = maxb
         super().__init__()
 
@@ -433,8 +445,8 @@ class HallSweep(Procedure):
 
         ress = []
         # get_temp and get_field from Dynacool
-        temp = mv.query_temp(self.host, self.port)[0]
-        bfield = mv.query_field(self.host, self.port)
+        temp = mv.query_temp(host, self.port)[0]
+        bfield = mv.query_field(host, self.port)
         print(bfield)
         tim = time() - self.starttime
 
@@ -456,10 +468,10 @@ class HallSweep(Procedure):
             'R vdp 2': ress[1], \
             'R Hall 1': ress[2], \
             'R Hall 2': ress[3], \
-            'R vdp 12': ress[4], \ # comment out for 1 vdp
-            'R vdp 22': ress[5], \ # comment out for 1 vdp
-            'R Hall 12': ress[6], \ # comment out for 1 vdp
-            'R Hall 22': ress[7], \ # comment out for 1 vdp
+            'R vdp 12': ress[4], \
+            'R vdp 22': ress[5], \
+            'R Hall 12': ress[6], \
+            'R Hall 22': ress[7], \
             })
         sleep(0.01)
         '''
@@ -504,7 +516,7 @@ class HallSweep(Procedure):
 
         #for i in range(self.iterations):
 
-        mv.set_field(self.host, self.port, self.maxb, 600)
+        mv.set_field(host, port, self.maxb, 600)
         sleep(1.8)
         bfld = 0.
         done = False
@@ -521,7 +533,7 @@ class HallSweep(Procedure):
 
             print(bfield[1], done)
 
-        mv.set_field(self.host, self.port, -self.maxb, 600)
+        mv.set_field(host, port, -self.maxb, 600)
         sleep(1.8)
 
         done = False
@@ -538,7 +550,7 @@ class HallSweep(Procedure):
 
 
         print('About to set field to zero.')
-        mv.set_field(self.host, self.port, 0.0, 600)
+        mv.set_field(host, port, 0.0, 600)
         sleep(1.8)
         
         done = False
@@ -640,15 +652,16 @@ def main():
     #plt.plot(flds)
     #plt.show()
 
-    app = QtGui.QApplications(sys.argv)
+    app = QtGui.QApplication(sys.argv)
     window = MainWindow()
     window.show()
     sys.exit(app.exec_())
 
     directory = r'C:\Users\maglab\Documents\Python Scripts\qdppms\NSTO'
     os.chdir(directory)
+    data_filename = 'rho_v_B_350K_5T_NS035g_1.csv'
 
-    procedure = HallSweep(host, port, 50000)
+    procedure = HallSweep(50000)
 
     procedure.iterations = 1
     procedure.high_current = 80.e-6
@@ -672,7 +685,6 @@ def main():
 
     #'''
 
-    data_filename = 'rho_v_B_350K_5T_NS035g_1.csv'
     results = Results(procedure, data_filename)
 
     worker = Worker(results)
