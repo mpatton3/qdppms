@@ -181,7 +181,7 @@ class myKeithley6221(Keithley6221):
         # might need to wait here...
         measdata = self.read()
 
-
+        #print(measdata)
         volt, voltstd = meas_value(measdata)
 
         #print('Res', res, 'Ohms', resstd)
@@ -189,7 +189,7 @@ class myKeithley6221(Keithley6221):
         #sleep(0.5)
         self.write(":TRAC:CLE")
 
-        print('made it herer!')
+        #print('made it herer!', volt, voltstd)
         return volt, voltstd
 
 

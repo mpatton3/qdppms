@@ -37,32 +37,41 @@ port = 5000
 
 class TransportMeas(Procedure):
 
-    def __init__(self):
+    #def __init__(self):
         #self.host = host
         #self.port = port
         #self.meastype = meastype
         #self.tempset = tempset
         #self.maxb = maxb
-        super().__init__()
+        #super().__init__()
 
-    iterations = IntegerParameter('Measurement Number')
+    iterations = IntegerParameter('Measurement Number', default=1)
     high_current = FloatParameter('Max Current', units='A', default=1.e-6)
     delta = FloatParameter('Delta', units='s', default=1.e-3)
     swpct1 = IntegerParameter('Sweep Count 1', default=10)
     swpct2 = IntegerParameter('Sweep Count 2', default=1)
     swpct3 = IntegerParameter('Sweep Count 3', default=10)
     nplc = IntegerParameter('Num Power Line Cycles', default=3)
-    rvng = FloatParameter('Voltmeter Range', default=1.e-5)
-    date = Parameter('Date Time', default='')
-    meastype = Parameter('Measurement Type', default='')
-    tempset = FloatParameter('Temperature Set Point', default=300.)
-    tempramp = FloatParameter('Temperature Ramp Rate', default=3.)
-    maxfield = FloatParameter('Maximum Field', default=0.)
-    fieldramp = FloatParameter('Magnetic Field Ramp Rate', default=100.)
-    pinconfig = Parameter('Pin Configuration', default='1vdP')
+    rvng = FloatParameter('Voltmeter Range', units='V', default=1.e-5)
+    date = Parameter('Date Time', default='now')
+    meastype = Parameter('Measurement Type', default='Temp')
+    tempset = FloatParameter('Temperature Set Point', units='K', default=300.)
+    tempramp = FloatParameter('Temperature Ramp Rate', units='K/min', default=3.)
+    maxfield = FloatParameter('Maximum Field', units='Oe', default=0.)
+    fieldramp = FloatParameter('Magnetic Field Ramp Rate', units='Oe/min', default=100.)
+    pinconfig = Parameter('Pin Configuration', default='2vdP')
 
-    DATA_COLUMNS = ['Time', 'Temperature'] # Had to have something here with no logic in order 
-                                    # for MainWindow def__init__ line to work
+    #DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R vdp 1', \
+    #                'R vdp 2', 'R Hall 1', 'R Hall 2'] # Had to have something
+    #                                                   # here with no logic in order 
+                                                       # for MainWindow def__init__ 
+                                                       # line to work
+
+    DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R vdp 1', \
+                    'R vdp 2', 'R Hall 1', 'R Hall 2', 'R vdp 12', \
+                    'R vdp 22', 'R Hall 12', 'R Hall 22']
+
+
 
     #if self.pinconfig == '1vdP':
     if pinconfig == '1vdP':
@@ -110,9 +119,8 @@ class TransportMeas(Procedure):
 
         res = self.currentsource.min_inloop_delta()
         self.switch.open_all()
-        return res/self.high_current
-
-
+        print('Done and opened switches', res)#/self.high_current)
+        return res[0]/self.high_current
 
 
     def startup(self):
@@ -131,6 +139,7 @@ class TransportMeas(Procedure):
         #                                     swpct1)
         print('Done Startup')
 
+        self.currentsource.write("FORM:ELEM DEF")
 
         sleep(0.1)
 
@@ -152,13 +161,23 @@ class TransportMeas(Procedure):
         bs = []
         self.starttime = time()
 
-        self.stable_field = r'"Holding (Driven)"'
+        if self.meastype == 'Temp':
+            self.stable_relevant = r'"Stable"'
+
+        if self.meastype == 'Hall':
+            self.stable_relevant = r'"Holding (Driven)"'
+
+            #mv.set_field(host, port, self.maxb, 600)
 
         #for i in range(self.iterations):
 
         if self.meastype == 'Hall':
+
+            print('Selected Hall')
+
             mv.set_field(host, port, self.maxfield, self.fieldramp)
             sleep(1.8)
+            print('Set Field')
             bfld = 0.
             done = False
             print('about to measure')
@@ -166,13 +185,13 @@ class TransportMeas(Procedure):
             while not done: # Run the first leg of the Hall sweep
 
                 print('Doing done loop')
-                bfield = self.in_loop(configs)
-                print(bfield)
-                bfld = bfield[0]
+                relevant = self.in_loop(configs)
+                print(relevant)
+                bfld = relevant[0]
 
-                done = bfield[1] == self.stable_field 
+                done = relevant[1] == self.stable_relevant 
 
-                print(bfield[1], done)
+                print(relevant[1], done)
 
             mv.set_field(host, port, -self.maxfield, self.fieldramp)
             sleep(1.8)
@@ -181,13 +200,13 @@ class TransportMeas(Procedure):
 
             while not done: # Run the middle leg of the Hall sweep
 
-                bfield = self.in_loop(configs)
-                print(bfield)
-                bfld = bfield[0]
+                relevant = self.in_loop(configs)
+                print(relevant)
+                bfld = relevant[0]
 
-                done = bfield[1] == self.stable_field 
+                done = relevant[1] == self.stable_relevant 
 
-                print(bfield[1], done)
+                print(relevant[1], done)
 
 
             print('About to set field to zero.')
@@ -199,39 +218,40 @@ class TransportMeas(Procedure):
             while not done: # Run the last leg of the Hall sweep
 
                 print('In last leg of sweep.')
-                bfield = self.in_loop(configs)
-                print(bfield)
-                bfld = bfield[0]
+                relevant = self.in_loop(configs)
+                print(relevant)
+                bfld = relevant[0]
 
-                done = bfield[1] == self.stable_field 
+                done = relevant[1] == self.stable_relevant 
 
-                print(bfield[1], done)
+                print(relevant[1], done)
 
+            print('Done Hall Sweep')
 
         if self.meastype == 'Temp':
-            mv.set_temp(host, port, self.tempset, self.ramprate)
+            mv.set_temp(host, port, self.tempset, self.tempramp)
             sleep(1.6)
             bfld = 0.
             done = False
             print('about to measure')
             #while bfld < 0.999*self.maxb:
             while not done:
+                relevant = self.in_loop(configs)
+                print(relevant)
+                bfld = relevant[0]
 
-                print('Doing done loop')
-                temp = self.in_loop(configs)
-                print(temp)
-                tmp = temp[0]
+                done = relevant[1] == self.stable_relevant 
 
-                done = temp[1] == self.stable_temp
+                print(relevant[1], done)
 
-                print(temp[1], done)
+            print('Done Temp Sweep')
 
 
     def in_loop(self, configs):
 
         ress = []
         # get_temp and get_field from Dynacool
-        temp = mv.query_temp(host, port)[0]
+        temp = mv.query_temp(host, port)
         bfield = mv.query_field(host, port)
         print(bfield)
         tim = time() - self.starttime
@@ -239,6 +259,7 @@ class TransportMeas(Procedure):
         #print('Temp ', temp, 'Field ', bfield)
 
         # This is where comment starts for bridges
+        print('Active configs are', configs)
         for c in configs:
 
             ress.append(self.resistance_measure(c))
@@ -248,9 +269,10 @@ class TransportMeas(Procedure):
 
         if self.pinconfig == '1vdP':
 
+            #print('In correct emitting block.', temp[0], bfield[0], ress)
             self.emit('results', {
                 'Time': tim, \
-                'Temperature': temp, \
+                'Temperature': temp[0], \
                 '\g(m)\-(0)H': bfield[0], \
                 'R vdp 1': ress[0], \
                 'R vdp 2': ress[1], \
@@ -258,14 +280,15 @@ class TransportMeas(Procedure):
                 'R Hall 2': ress[3], \
                 })
 
+            print('Emit successful')
 
         if self.pinconfig == '2vdP':
-            DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R vdp 1', \
-                            'R vdp 2', 'R Hall 1', 'R Hall 2', 'R vdp 12', \
-                            'R vdp 22', 'R Hall 12', 'R Hall 22']
+            #DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R vdp 1', \
+            #                'R vdp 2', 'R Hall 1', 'R Hall 2', 'R vdp 12', \
+            #                'R vdp 22', 'R Hall 12', 'R Hall 22']
             self.emit('results', {
                 'Time': tim, \
-                'Temperature': temp, \
+                'Temperature': temp[0], \
                 '\g(m)\-(0)H': bfield[0], \
                 'R vdp 1': ress[0], \
                 'R vdp 2': ress[1], \
@@ -282,7 +305,7 @@ class TransportMeas(Procedure):
                             'R bridge 2']
             self.emit('results', {
                 'Time': tim, \
-                'Temperature': temp, \
+                'Temperature': temp[0], \
                 '\g(m)\-(0)H': bfield[0], \
                 'R bridge 1': ress[0], \
                 'R bridge 2': ress[1], \
@@ -312,9 +335,14 @@ class TransportMeas(Procedure):
 
         '''
 
+        if self.meastype == 'Temp':
+            relevant = temp
+
+        if self.meastype == 'Hall':
+            relevant = bfield
         print('done emitting')
 
-        return bfield
+        return relevant
 
 
 class MainWindow(ManagedWindow):
@@ -322,23 +350,23 @@ class MainWindow(ManagedWindow):
     def __init__(self):
         #super(MainWindow, self).__init__(
         super().__init__(
-            procedure_class = TransportMeas(),
+            procedure_class = TransportMeas,
             inputs=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
                     'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
                     'tempramp', 'maxfield', 'fieldramp', 'pinconfig'],
             displays=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
                     'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
                     'tempramp', 'maxfield', 'fieldramp', 'pinconfig'],
-            x_axis='Iteration',
-            y_axis='high_current') #,
-            #directory_input=True,
-            #sequencer=True,
-            #sequencer_inputs=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
-            #        'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
-            #        'tempramp', 'maxfield', 'fieldramp', 'pinconfig'],
+            x_axis='Time',
+            y_axis='Temperature',
+            directory_input=True,
+            sequencer=True,
+            sequencer_inputs=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
+                    'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
+                    'tempramp', 'maxfield', 'fieldramp', 'pinconfig'])#,
             #sequence_file="gui_sequencer_example_sequence.txt"
         #)
-        self.setWindowTitle('GUI Example')
+        self.setWindowTitle('Arbitrary Sweep')
 
     def queue(self, procedure=None):
         directory = self.directory
@@ -346,8 +374,12 @@ class MainWindow(ManagedWindow):
         print('mydir', directory)
         #self.directory = r'C:\\Users\\Neil\\Documents'
         filename = unique_filename(directory)
+        #procedure = self.make_procedure()
 
         if procedure is None:
+            procedure = self.make_procedure()
+        elif not procedure:
+            print('making procedure my way')
             procedure = self.make_procedure()
 
         #procedure = self.make_procedure()
@@ -512,11 +544,16 @@ class HallSweep(Procedure):
         bs = []
         self.starttime = time()
 
-        self.stable_field = r'"Holding (Driven)"'
+        if self.meastype == 'Temp':
+            self.stable_relevant = r'"Stable"'
+
+        if self.meastype == 'Hall':
+            self.stable_relevant = r'"Holding (Driven)"'
+
+            mv.set_field(host, port, self.maxb, 600)
 
         #for i in range(self.iterations):
 
-        mv.set_field(host, port, self.maxb, 600)
         sleep(1.8)
         bfld = 0.
         done = False
@@ -525,13 +562,13 @@ class HallSweep(Procedure):
         while not done:
 
             print('Doing done loop')
-            bfield = self.in_loop(configs)
-            print(bfield)
+            relevant = self.in_loop(configs)
+            print('relevant is ', relevant)
             bfld = bfield[0]
 
-            done = bfield[1] == self.stable_field 
+            done = relevant[1] == self.stable_relevant 
 
-            print(bfield[1], done)
+            print(relevant[1], done)
 
         mv.set_field(host, port, -self.maxb, 600)
         sleep(1.8)
@@ -661,6 +698,7 @@ def main():
     os.chdir(directory)
     data_filename = 'rho_v_B_350K_5T_NS035g_1.csv'
 
+    
     procedure = HallSweep(50000)
 
     procedure.iterations = 1
@@ -683,7 +721,7 @@ def main():
     #print('Hall sweep started up')
 
 
-    #'''
+    '''
 
     results = Results(procedure, data_filename)
 
@@ -693,7 +731,7 @@ def main():
 
     worker.join(timeout=120) # wait at most 2 min
 
-    #'''
+    '''
 
 
 

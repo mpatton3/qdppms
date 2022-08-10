@@ -123,6 +123,7 @@ def set_temp(host, port, temp, rate):
 
 def set_field(host, port, field, rate):
 
+    print('In set field')
     # Connect to Socket Server
     addr = (host, port)
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -173,10 +174,10 @@ def main():
     #print(query_field(host, port))
 
 
-    set_temp(host, port, 200.0, 13.5)
+    set_temp(host, port, 300.1, 3.5)
     #time.sleep(0.013)   # min wait time to not disconnect telnet port.
     #time.sleep(0.3)
-    set_field(host, port, 4500.0, 100.0)
+    set_field(host, port, 00.0, 10.0)
     #time.sleep(0.3)
     #set_temp(host, port, 300.0, 3.5)
 
