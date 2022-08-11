@@ -21,16 +21,16 @@ def main():
 
     #directory = r'R:\Lab Member Files\Neil Campbell\Materials\Bismuthate\B023'
     directory = (r"R:\Lab Member Files\Pratap Pal\PPMS"
-                 r"\Jieun\08-01-22-KTO-jk244\test")
+                 r"\Jieun\08-11-22-KTO-jk246")
     os.chdir(directory)
-    sname = 'jk444'
+    sname = 'jk246'
 
     #meas = 'temp' # hall or temp
     thick = 1. #32.03e-7  # thickness in cm
-    chnl = 1 # first (1) or second (2) vdp set, takes integer
+    chnl = 2 # first (1) or second (2) vdp set, takes integer
     anomalous = False # Do analysis for Anomalous Hall effect too?
 
-    fl = glob.glob('Data2022*.csv')
+    fl = glob.glob('rho_2022*.csv')
     print(fl)
     #name = r'rho_v_T_300K_2T_Hall_0.raw'
 
@@ -69,7 +69,7 @@ def main():
 
         flist = list(fl[i])
         del flist[-4:]
-        toappend = str(chnl) + '_rsq.txt'
+        toappend = '_' + str(chnl) + '_rsq.txt'
         flist.append(toappend)
         flnew = ''.join(flist)
         print(flnew)
