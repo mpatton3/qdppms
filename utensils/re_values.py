@@ -79,6 +79,10 @@ def get_angle(string):
 
     return angle
 
+def get_meta_field(string):
+
+    restring = ''
+
 
 def main():
 
