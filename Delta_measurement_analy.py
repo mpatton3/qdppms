@@ -16,7 +16,7 @@ import utensils.data_reduce as dr
 def main():
 
     directory = (r'R:\Lab Member Files\Tony Edgeton\Raw Data\Transport'
-                 r'\PPMS\B015\220721\300K_10mA_highB')
+                 r'\PPMS\B028\220816\300K_3.5mA_0')
 
     os.chdir(directory)
 
@@ -24,18 +24,18 @@ def main():
     #flp = glob.glob('IV_sweep_*Oe_12000.00uA*pos*.txt')
     #print(fln)
 
-    glbstrs = ['IV_sweep_*Oe_10000.00uA*neg*.txt', 
-               'IV_sweep_*Oe_10000.00uA*pos*.txt']
+    glbstrs = ['IV_sweep_*Oe_3500.00uA*neg*.txt', 
+               'IV_sweep_*Oe_3500.00uA*pos*.txt']
                
     measurement = dr.MeasDirectory(glbstrs)
-    measurement.read_data(80, 58)
+    measurement.read_data(95, 75)
 
     print(measurement.lists_pos.fields, measurement.lists_pos.ordinals)
 
     measurement.compute_voltages()
     print(measurement.values.head())
 
-    measurement.write_data('Asym_Delta_10mA_300K_summary_test.txt')
+    measurement.write_data('Asym_Delta_3.5mA_300K_summary_0.txt')
 
     #plt.plot(val_lin_pos, 'bo')
     #plt.plot(val_lin_neg, 'ro')

@@ -226,9 +226,221 @@ class MeasDirectory:
         self.values.to_csv(filename, sep='\t', index=False)
 
 
+class AsymDeltaMeas:
+
+    def __init__(filename):
+        pass
+
+    def read_overview_file(self, filename):
+
+        self.data = pd.read_csv(filename, skiprows=26, engine='python')
+
+        self.data['even'] = (self.data['V+ 1'] + self.data['V- 1'])/2.
+        self.data['odd'] = (self.data['V+ 1'] - self.data['V- 1'])/2.
+
+    def shh_fit_highH(self, function, cutoff):
+
+        self.params, pcov = curve_fit(function, 
+                                 self.data['\g(m)\-(0)H'].loc[:cutoff], 
+                                 self.data['even'].loc[:cutoff])
+
+        print('params are ', self.params)
+
+        self.data['fit'] = veven_v_H(self.data['\g(m)\-(0)H'], *self.params)
+
+        plt.plot(self.data[r'\g(m)\-(0)H'], self.data['even'])
+        plt.plot(self.data[r'\g(m)\-(0)H'], self.data['fit'])
+        plt.show()
+
+
+def veven_v_H(H, a, k, d):
+
+    return a / (H-k) - d
+
+def cubic_resistance(I, a, b, c, d):
+
+    return a*I**3 + b*I**2 + c*I + d
+
+def quintic_resistance(I, a, b, c, d, e, f):
+
+    return a*I**5 + b*I**4 + c*I**3 + d*I**2 + e*I + f
+
+def quadratic_sot(I, a):
+
+    return a*I**2
+
+class IVMeasST:
+
+    def __init__(self):
+        pass
+
+    def readfiles(self, posid, negid):
+        flistn = glob.glob(negid)
+        fieldn = round(ur.get_field(flistn[0])/10.)*10.
+        flistp = glob.glob(posid)
+        fieldp = round(ur.get_field(flistp[0])/10.)*10.
+        print('About to work on field ', fieldp, ' Oe')
+        self.field = fieldp
+
+        self.neg_files = []
+        for f in flistn:
+            self.neg_files.append(pd.read_csv(f, sep='\t', engine='python'))
+
+        self.pos_files = []
+        for f in flistp:
+            self.pos_files.append(pd.read_csv(f, sep='\t', engine='python'))
+
+        #print(self.neg_files[0].head())
+        #print(self.neg_files[0].loc[:,'Voltage'])
+
+
+    def find_quad(self, show):
+
+        length = len(self.pos_files)
+        #print(length, type(length))
+        self.volts_pos = np.zeros(len(self.pos_files[0]))
+        for df in self.pos_files:
+            self.volts_pos += df.loc[:,'Voltage']/length
+
+        length = len(self.neg_files)
+        self.volts_neg = np.zeros(len(self.neg_files[0]))
+        for df in self.neg_files:
+            self.volts_neg += df.loc[:,'Voltage']/length
+
+        #self.res, self.offset, r, p, s = linregress(
+        #                    self.neg_files[0].loc[:,'Current'],
+        #                    volts)
+
+        self.params_pos, pcov = curve_fit(quintic_resistance, 
+                                self.pos_files[0].loc[:,'Current'],
+                                self.volts_pos)
+
+        self.params_neg, pcov = curve_fit(quintic_resistance, 
+                                self.neg_files[0].loc[:,'Current'],
+                                self.volts_neg)
+
+        self.volts_lin_pos = (self.volts_pos
+                   - (self.pos_files[0].loc[:,'Current']**5)*self.params_pos[0] 
+                   - (self.pos_files[0].loc[:,'Current']**3)*self.params_pos[2] 
+                   - (self.pos_files[0].loc[:,'Current']**1)*self.params_pos[4] 
+                   - self.params_pos[5])
+
+        self.volts_lin_neg = (self.volts_neg 
+                   - (self.neg_files[0].loc[:,'Current']**5)*self.params_neg[0] 
+                   - (self.neg_files[0].loc[:,'Current']**3)*self.params_neg[2] 
+                   - (self.neg_files[0].loc[:,'Current']**1)*self.params_neg[4] 
+                   - self.params_neg[5])
+
+        self.volts_lin_pos3 = (self.pos_files[3].loc[:,'Voltage'] 
+                   - (self.pos_files[3].loc[:,'Current']**5)*self.params_pos[0] 
+                   - (self.pos_files[3].loc[:,'Current']**3)*self.params_pos[2] 
+                   - (self.pos_files[3].loc[:,'Current']**1)*self.params_pos[4] 
+                   - self.params_pos[5])
+
+        self.volts_quad = (self.volts_lin_pos - self.volts_lin_neg)/2.
+        
+        self.rep_current = self.pos_files[0].loc[:,'Current']
+
+        self.params_quad, pcov = curve_fit(quadratic_sot, 
+                                           self.rep_current,
+                                           self.volts_quad)
+        print('Curvature ', self.params_quad[0])
+        self.volts_fit = quadratic_sot(self.rep_current, self.params_quad[0])
+
+        if show:
+            #plt.plot(self.pos_files[3].loc[:,'Current'], 
+            #         self.volts_lin_pos3, 'b')
+            #plt.plot(self.pos_files[3].loc[:,'Current'], 
+            #         self.pos_files[3].loc[:,'Voltage'], 'k')
+            plt.plot(self.pos_files[0].loc[:,'Current'],
+                     self.volts_lin_pos, 'k')
+            plt.plot(self.neg_files[0].loc[:,'Current'],
+                     self.volts_lin_neg, 'g')
+            plt.plot(self.neg_files[0].loc[:,'Current'],
+                     self.volts_quad, 'b')
+
+            plt.show()
+
+class IVFieldSweep()
+
+    def __init__(self):            
+        self.measurements = []
+        self.fields = []
+        self.curvatures = []
+        self.meas_num = 0
+
+    def one_field(self, pos_id, neg_id):
+        """Append a measurement at one field (both positive and negative)
+        to the list of measurements, and compute its relevante parameters."""
+
+        selfmeas_num += 1
+        self.measurements.append(IVMeasST())
+        self.measurements[-1].readfiles(pos_id, neg_id)
+        self.measurements[-1].find_quad(show=False)
+        self.fields.append(measurement[-1].field)
+        self.curvatures.append(measurement[-1].params_quad[0])
+
+    def make_big_plot(self)
+
+        #fig, ((ax1, ax2, ax3),
+        #      (ax4, ax5, ax6),
+        #   (ax7, ax8, ax9)) = plt.subplots(3,3,  sharex = True, sharey = True)
+        fig, axs = plt.subplots(3,3,  sharex = True, sharey = True)
+        fig.suptitle('Even Current contribution')
+
+        for i in range(self.meas_num):
+            ix = i / self.meas_num
+            iy = i % self.meas_num]
+            axs[ix, iy].plot(x, self.measurements[i].volts_quad)
+            axs[ix, iy].set_title(str(self.measurements[i].field/1000) ' kOe')
             
+            if iy == 0:
+                axs[ix, iy].set_ylabel('Voltage (V)')
+
+            if ix == 2:
+                axs[ix, iy].set_xlabel('Current (A)')
+ 
+            '''
+            ax1.plot(x, ys[0].volts_fit)
+            ax1.set_title(str(self.measurements[i].field) ' kOe')
+            ax1.set_ylabel('Voltage (V)')
+            axs[0,1].plot(x, ys[1].volts_quad)
+            ax2.plot(x, ys[1].volts_fit)
+            ax2.set_title('3.5 kOe')
+            ax3.plot(x, ys[2].volts_quad)
+            ax3.plot(x, ys[2].volts_fit)
+            ax3.set_title('4.0 kOe')
+            ax4.plot(x, ys[3].volts_quad)
+            ax4.plot(x, ys[3].volts_fit)
+            ax4.set_title('4.5 kOe')
+            ax4.set_ylabel('Voltage (V)')
+            ax5.plot(x, ys[4].volts_quad)
+            ax5.plot(x, ys[4].volts_fit)
+            ax5.set_title('5.0 kOe')
+            ax6.plot(x, ys[5].volts_quad)
+            ax6.plot(x, ys[5].volts_fit)
+            ax6.set_title('5.5 kOe')
+            ax7.plot(x, ys[6].volts_quad)
+            ax7.plot(x, ys[6].volts_fit)
+            ax7.set_title('6.0 kOe')
+            ax7.set_xlabel('Current (A)')
+            ax7.set_ylabel('Voltage (V)')
+            ax8.plot(x, ys[7].volts_quad)
+            ax8.plot(x, ys[7].volts_fit)
+            ax8.set_title('7.0 kOe')
+            ax8.set_xlabel('Current (A)')
+            ax9.plot(x, ys[8].volts_quad)
+            ax9.plot(x, ys[8].volts_fit)
+            ax9.set_title('8.0 kOe')
+            ax9.set_xlabel('Current (A)')
+            '''
+
+            plt.show()
 
 
+        
+    
+    
 
 
 

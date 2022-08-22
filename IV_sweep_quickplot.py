@@ -9,6 +9,9 @@ from scipy.stats import linregress
 import os
 import glob
 
+import utensils.re_values as ur
+import utensils.data_reduce as ud
+
 
 def veven_v_H(H, a, k, d):
 
@@ -18,111 +21,67 @@ def cubic_resistance(I, a, b, c, d):
 
     return a*I**3 + b*I**2 + c*I + d
 
-class AsymDeltaMeas:
+def quintic_resistance(I, a, b, c, d, e, f):
 
-    def __init__(filename):
-        pass
+    return a*I**5 + b*I**4 + c*I**3 + d*I**2 + e*I + f
 
-    def read_overview_file(self, filename):
+def quadratic_sot(I, a):
 
-        self.data = pd.read_csv(filename, skiprows=26, engine='python')
-
-        self.data['even'] = (self.data['V+ 1'] + self.data['V- 1'])/2.
-        self.data['odd'] = (self.data['V+ 1'] - self.data['V- 1'])/2.
-
-    def shh_fit_highH(self, function, cutoff):
-
-        self.params, pcov = curve_fit(function, 
-                                 self.data['\g(m)\-(0)H'].loc[:cutoff], 
-                                 self.data['even'].loc[:cutoff])
-
-        print('params are ', self.params)
-
-        self.data['fit'] = veven_v_H(self.data['\g(m)\-(0)H'], *self.params)
-
-        plt.plot(self.data[r'\g(m)\-(0)H'], self.data['even'])
-        plt.plot(self.data[r'\g(m)\-(0)H'], self.data['fit'])
-        plt.show()
+    return a*I**2
 
 
-class IVMeas:
-
-    def __init__(self):
-        pass
-
-    def readfiles(self, posid, negid):
-        flistn = glob.glob(negid)
-        flistp = glob.glob(posid)
-
-        self.neg_files = []
-        for f in flistn:
-            self.neg_files.append(pd.read_csv(f, sep='\t', engine='python'))
-
-        self.pos_files = []
-        for f in flistp:
-            self.pos_files.append(pd.read_csv(f, sep='\t', engine='python'))
-
-        print(self.neg_files[0].head())
-        #print(self.neg_files[0].loc[:,'Voltage'])
+def make_big_plot(x, ys):
 
 
-    def find_quad(self):
+    fig, ((ax1, ax2, ax3),
+          (ax4, ax5, ax6),
+          (ax7, ax8, ax9)) = plt.subplots(3,3,  sharex = True, sharey = True)
+    fig.suptitle('Even Current contribution')
+    ax1.plot(x, ys[0].volts_quad)
+    ax1.plot(x, ys[0].volts_fit)
+    ax1.set_title('3.0 kOe')
+    ax1.set_ylabel('Voltage (V)')
+    ax2.plot(x, ys[1].volts_quad)
+    ax2.plot(x, ys[1].volts_fit)
+    ax2.set_title('3.5 kOe')
+    ax3.plot(x, ys[2].volts_quad)
+    ax3.plot(x, ys[2].volts_fit)
+    ax3.set_title('4.0 kOe')
+    ax4.plot(x, ys[3].volts_quad)
+    ax4.plot(x, ys[3].volts_fit)
+    ax4.set_title('4.5 kOe')
+    ax4.set_ylabel('Voltage (V)')
+    ax5.plot(x, ys[4].volts_quad)
+    ax5.plot(x, ys[4].volts_fit)
+    ax5.set_title('5.0 kOe')
+    ax6.plot(x, ys[5].volts_quad)
+    ax6.plot(x, ys[5].volts_fit)
+    ax6.set_title('5.5 kOe')
+    ax7.plot(x, ys[6].volts_quad)
+    ax7.plot(x, ys[6].volts_fit)
+    ax7.set_title('6.0 kOe')
+    ax7.set_xlabel('Current (A)')
+    ax7.set_ylabel('Voltage (V)')
+    ax8.plot(x, ys[7].volts_quad)
+    ax8.plot(x, ys[7].volts_fit)
+    ax8.set_title('7.0 kOe')
+    ax8.set_xlabel('Current (A)')
+    ax9.plot(x, ys[8].volts_quad)
+    ax9.plot(x, ys[8].volts_fit)
+    ax9.set_title('8.0 kOe')
+    ax9.set_xlabel('Current (A)')
+ 
+    plt.show()
 
-        length = len(self.pos_files)
-        print(length, type(length))
-        self.volts_pos = np.zeros(len(self.pos_files[0]))
-        for df in self.pos_files:
-            self.volts_pos += df.loc[:,'Voltage']/length
 
-        length = len(self.neg_files)
-        self.volts_neg = np.zeros(len(self.neg_files[0]))
-        for df in self.neg_files:
-            self.volts_neg += df.loc[:,'Voltage']/length
-
-        #self.res, self.offset, r, p, s = linregress(
-        #                    self.neg_files[0].loc[:,'Current'],
-        #                    volts)
-
-        self.params_pos, pcov = curve_fit(cubic_resistance, 
-                                self.pos_files[0].loc[:,'Current'],
-                                self.volts_pos)
-
-        self.params_neg, pcov = curve_fit(cubic_resistance, 
-                                self.neg_files[0].loc[:,'Current'],
-                                self.volts_neg)
-
-        self.volts_lin_pos = (self.volts_pos
-                     - (self.pos_files[0].loc[:,'Current']**3)*self.params_pos[0] 
-                     - (self.pos_files[0].loc[:,'Current']**1)*self.params_pos[2] 
-                     - self.params_pos[3])
-
-        self.volts_lin_neg = (self.volts_neg 
-                     - (self.neg_files[0].loc[:,'Current']**3)*self.params_neg[0] 
-                     - (self.neg_files[0].loc[:,'Current']**1)*self.params_neg[2] 
-                     - self.params_neg[3])
-
-        self.volts_lin_pos3 = (self.pos_files[3].loc[:,'Voltage'] 
-                     - (self.pos_files[3].loc[:,'Current']**3)*self.params_pos[0] 
-                     - (self.pos_files[3].loc[:,'Current']**1)*self.params_pos[2] 
-                     - self.params_pos[3])
-
-        self.volts_quad = (self.volts_lin_pos - self.volts_lin_neg)/2.
-
-        #plt.plot(self.pos_files[3].loc[:,'Current'], 
-        #         self.volts_lin_pos3, 'b')
-        #plt.plot(self.pos_files[3].loc[:,'Current'], 
-        #         self.pos_files[3].loc[:,'Voltage'], 'k')
-        plt.plot(self.pos_files[0].loc[:,'Current'], self.volts_lin_pos, 'k')
-        plt.plot(self.neg_files[0].loc[:,'Current'], self.volts_lin_neg, 'g')
-        plt.plot(self.neg_files[0].loc[:,'Current'], self.volts_quad, 'b')
-
-        plt.show()
-
+def bso_v_field(B, a, K, s):
+    
+    return a/(B-K) + s
 
 def main():
 
     directory = (r"R:\Lab Member Files\Tony Edgeton\Raw Data\Transport"
-                 r"\PPMS\B028\220820\300K_IVs")
+                 r"\PPMS\B028\220820\300K_IVs_2")
     os.chdir(directory)
 
     filename = 'Delta_asym_2.5mA_300K_8kOe_90deg_B028_0.csv'
@@ -136,11 +95,33 @@ def main():
     """
 
     # For individual IV sweep files
-    measurement = IVMeas()
-    measurement.readfiles('IV*_4500*.txt', 'IV*_-4500*.txt')
-    measurement.find_quad()
+    pos_ids = ['IV*_3000*.txt', 'IV*_3501*.txt', 'IV*_4000*.txt',
+               'IV*_4500*.txt', 'IV*_5000*.txt', 'IV*_5500*.txt',
+               'IV*_6000*.txt', 'IV*_7000*.txt', 'IV*_8001*.txt']
+    neg_ids = ['IV*_-3000*.txt', 'IV*_-3500*.txt', 'IV*_-4000*.txt',
+               'IV*_-4500*.txt', 'IV*_-5000*.txt', 'IV*_-5500*.txt',
+               'IV*_-6001*.txt', 'IV*_-7001*.txt', 'IV*_-8000*.txt']
+    measurement = []
+    flds = []
+    curvs = []
+    for i in range(9):
+        measurement.append(ud.IVMeasST())
+        measurement[-1].readfiles(pos_ids[i], neg_ids[i])
+        measurement[-1].find_quad(show=False)
+        flds.append(measurement[-1].field)
+        #print(flds)
+        curvs.append(measurement[-1].params_quad[0])
+        #print(curvs)
+
+    params, pcov = curve_fit(bso_v_field, flds, curvs, [-1800., 2400., 3.e-6])
+
+    make_big_plot(measurement[0].rep_current, measurement)
+
     #flistn = glob.glob('IV*-2600*.txt')
     #flistp = glob.glob('IV*2600*.txt')
+    plt.plot(flds, curvs)
+    plt.plot(flds, bso_v_field(flds, *params))
+    plt.show()
 
 
 

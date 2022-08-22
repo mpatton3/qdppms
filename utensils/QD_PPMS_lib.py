@@ -195,9 +195,6 @@ class VdP_Measurement:
 
     def __init__(self, filename, thick, channel=1):
 
-        #TODO: make metadata read into a dictionary.
-
-        
         self.thick = thick
         self.channel = channel
 

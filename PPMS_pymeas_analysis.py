@@ -21,13 +21,13 @@ def main():
 
     #directory = r'R:\Lab Member Files\Neil Campbell\Materials\Bismuthate\B023'
     directory = (r"R:\Lab Member Files\Pratap Pal\PPMS"
-                 r"\Jieun\08-11-22-KTO-jk246")
+                 r"\Jieun\08-19-22-KTO-jk255")
     os.chdir(directory)
-    sname = 'jk246'
+    sname = 'jk255'
 
     #meas = 'temp' # hall or temp
     thick = 1. #32.03e-7  # thickness in cm
-    chnl = 2 # first (1) or second (2) vdp set, takes integer
+    chnl = 1 # first (1) or second (2) vdp set, takes integer
     anomalous = False # Do analysis for Anomalous Hall effect too?
 
     fl = glob.glob('rho_2022*.csv')
@@ -67,16 +67,21 @@ def main():
 
         print('File', fl[i])
 
-        flist = list(fl[i])
-        del flist[-4:]
-        toappend = '_' + str(chnl) + '_rsq.txt'
-        flist.append(toappend)
-        flnew = ''.join(flist)
-        print(flnew)
- 
         # Compute Resistance data
         meas = qp.VdP_Measurement(fl[i], thick, chnl)
         meas.compute_resistances()
+        
+        # Make file name for new, reduced individual channel files
+        flist = list(fl[i])
+        del flist[-4:]
+        if meas.metadata['Measurement Type'] == 'Hall':
+            toappend = '_' + str(chnl) + 'Hall_rsq.txt'
+        if meas.metadata['Measurement Type'] == 'Temp':
+            toappend = '_' + str(chnl) + 'Temp_rsq.txt'
+        flist.append(toappend)
+        flnew = ''.join(flist)
+        print(flnew)
+
         if meas.metadata['Measurement Type'] == 'Hall':
             meas.compute_params()
             print('carriers, mobility ', meas.ncd, meas.mu)
