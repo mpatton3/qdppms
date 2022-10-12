@@ -59,6 +59,7 @@ class TransportMeas(Procedure):
     tempramp = FloatParameter('Temperature Ramp Rate', units='K/min', default=3.)
     maxfield = FloatParameter('Maximum Field', units='Oe', default=0.)
     fieldramp = FloatParameter('Magnetic Field Ramp Rate', units='Oe/min', default=100.)
+    hysteresis = BooleanParameter('Do we expect a hysteresis in B', default = False)
     pinconfig = Parameter('Pin Configuration', default='2vdP')
 
     #DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R vdp 1', \
@@ -174,6 +175,14 @@ class TransportMeas(Procedure):
         if self.meastype == 'Hall':
 
             print('Selected Hall')
+
+            if self.hysteresis:
+                mv.set_field(host, port, -self.maxfield, 100)
+                done = False
+                while not done:
+
+                    done = relevant[1] == self.stable_relevant 
+
 
             mv.set_field(host, port, self.maxfield, self.fieldramp)
             sleep(1.8)
@@ -361,17 +370,17 @@ class MainWindow(ManagedWindow):
             procedure_class = TransportMeas,
             inputs=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
                     'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
-                    'tempramp', 'maxfield', 'fieldramp', 'pinconfig'],
+                    'tempramp', 'maxfield', 'fieldramp', 'hysteresis', 'pinconfig'],
             displays=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
                     'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
-                    'tempramp', 'maxfield', 'fieldramp', 'pinconfig'],
+                    'tempramp', 'maxfield', 'fieldramp', 'hysteresis', 'pinconfig'],
             x_axis='Time',
             y_axis='Temperature',
             directory_input=True,
             sequencer=True,
             sequencer_inputs=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
                     'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
-                    'tempramp', 'maxfield', 'fieldramp', 'pinconfig'],
+                    'tempramp', 'maxfield', 'fieldramp', 'hysteresis', 'pinconfig'],
             inputs_in_scrollarea = True)#,
             #sequence_file="gui_sequencer_example_sequence.txt"
         #)
