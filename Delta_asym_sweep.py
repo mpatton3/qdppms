@@ -48,7 +48,8 @@ class DeltaPolarity(Procedure):
     swpct1 = IntegerParameter('Sweep Count 1', default=10) # num delta readings
     swpct2 = IntegerParameter('Sweep Count 2', default=1) # num sweeps
     swpct3 = IntegerParameter('Digital Filter Count', default=10) # filter number
-    rvng = FloatParameter('Voltmeter Range', default=1.e-5)
+    switch_config = Parameter('I+, I-, V+, V-', default=[1,2,3,4])
+    rvng = FloatParameter('Voltmeter Range', default=1.e1)
     date = Parameter('Date Time', default='')
     num_meas = IntegerParameter('Number of IV sweeps to take at each point', default=1)
 
@@ -78,7 +79,7 @@ class DeltaPolarity(Procedure):
     
         self.starttime = time()
         print('Done Startup')
-        self.switch.clos_custom(4, 3, 5, 1)
+        self.switch.clos_custom(*self.switch_config)
 
         # Generate Temp list for measurement
 
@@ -180,7 +181,7 @@ class DeltaPolarity(Procedure):
             self.currentsource.arm_delta(self.I_pos_max, \
                 self.I_pos_min, self.delay, self.swpct1, self.swpct2,\
                 self.swpct3, self.nplc, self.rvng, self.swpct1)
-            sleep(0.1)
+            sleep(0.15)
             print('armed')
 
         if polarity == 'negative':
@@ -212,9 +213,9 @@ def main():
 
     # Start editing
     directory = (r'C:\Users\maglab\Documents\Python Scripts\data\BPBO'
-                 r'\B015\220721\300K_10mA_test')
+                 r'\B028\220820\300K_2.5mA_0')
     os.chdir(directory)
-    data_filename = 'Delta_asym_10mA_300K_10kOe_90deg_B015_test2.csv'
+    data_filename = 'Delta_asym_2.5mA_200K_8kOe_90deg_B028_0.csv'
 
 
     '''
@@ -222,26 +223,27 @@ def main():
     ramprate = 100   # field ramp in Oe/sec
     '''
     procedure = DeltaPolarity(host, port)
-    procedure.angle = 665. # Angle of the probe
+    procedure.angle = 90. # Angle of the probe
     procedure.iterations = 1
-    procedure.start_temp = 300. # Kelvin
-    procedure.end_temp =  300. # Kelvin
+    procedure.start_temp = 200. # Kelvin
+    procedure.end_temp =  200. # Kelvin
     procedure.temp_points = 2 # number of temp points 
     procedure.temp_ramp = 5 # Kelvin/min
-    procedure.start_field = 000. # Oe
-    procedure.end_field = 000. # Oe
-    procedure.field_points = 1 # number of field points
-    procedure.field_ramp = 20. # Oe/sec
-    procedure.I_pos_max = 10.e-3 # Amps this should not be zero.
+    procedure.start_field = 8000. # Oe
+    procedure.end_field = 2000. # Oe
+    procedure.field_points = 61 # number of field points
+    procedure.field_ramp = 40. # Oe/sec
+    procedure.I_pos_max = 2.5e-3 # Amps this should not be zero.
     procedure.I_pos_min = 0.e-3 # Amps this should be zero.
-    procedure.I_neg_max = -10.e-3 # Amps this should not be zero, and should be <0.
+    procedure.I_neg_max = -2.5e-3 # Amps this should not be zero, and should be <0.
     procedure.I_neg_min = 0.e-3 # Amps this should be zero.
     procedure.delay = 1.e-3 # seconds
     procedure.nplc = 1 # number power line cycles, select either 1 or 5
-    procedure.swpct1 = 100 # number of delta points
+    procedure.swpct1 = 120 # number of delta points
     procedure.swpct2 = 1 # something?
     procedure.swpct3 = 1 # filter 
     procedure.rvng = 10.e0 # Voltmeter range
+    procedure.switch_config = [5, 1, 4, 8] # Switch configuration I+,I-, V+,V-
     procedure.date = now.strftime("%m/%d/%Y, %H:%M:%S")
     procedure.num_meas = 2 # number of measurements to take at each temp/field
 

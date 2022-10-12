@@ -52,7 +52,7 @@ class TransportMeas(Procedure):
     swpct2 = IntegerParameter('Sweep Count 2', default=1)
     swpct3 = IntegerParameter('Sweep Count 3', default=10)
     nplc = IntegerParameter('Num Power Line Cycles', default=3)
-    rvng = FloatParameter('Voltmeter Range', units='V', default=1.e-5)
+    rvng = FloatParameter('Voltmeter Range', units='V', default=1.e1)
     date = Parameter('Date Time', default='now')
     meastype = Parameter('Measurement Type', default='Temp')
     tempset = FloatParameter('Temperature Set Point', units='K', default=300.)
@@ -102,13 +102,13 @@ class TransportMeas(Procedure):
         if config == 'Hall2':
             self.switch.clos_Hall2()
         if config == 'vdp12':
-            self.switch.clos_vdp1()
+            self.switch.clos_vdp12()
         if config == 'vdp22':
-            self.switch.clos_vdp2()
+            self.switch.clos_vdp22()
         if config == 'Hall12':
-            self.switch.clos_Hall1()
+            self.switch.clos_Hall12()
         if config == 'Hall22':
-            self.switch.clos_Hall2()
+            self.switch.clos_Hall22()
         if config == 'c1': 
             self.switch.clos_custom1()
         if config == 'c2': 
@@ -148,7 +148,7 @@ class TransportMeas(Procedure):
 
         #self.maxb = 100000.
         self.switch.set_pins(1,3,4,2) #1,3,4,2
-        self.switch.set_pins2(5,7,8,6) #1,3,4,2
+        self.switch.set_pins2(5,9,8,6) #1,3,4,2 # 7 -> 9 b/c 7 is bad at SM
         if self.pinconfig == '1vdP':
              configs = ['vdp1', 'vdp2', 'Hall1', 'Hall2']
         if self.pinconfig == '2vdP':
@@ -235,6 +235,7 @@ class TransportMeas(Procedure):
             done = False
             print('about to measure')
             #while bfld < 0.999*self.maxb:
+            inum = 0
             while not done:
                 relevant = self.in_loop(configs)
                 print(relevant)
@@ -243,6 +244,13 @@ class TransportMeas(Procedure):
                 done = relevant[1] == self.stable_relevant 
 
                 print(relevant[1], done)
+
+                # Handle the PPMS not stabilizing at 2K
+                if self.tempset < 2.3:
+                    if relevant[0] < 2.3:
+                        if inum > 10:
+                            done = True
+                        inum += 1
 
             print('Done Temp Sweep')
 
@@ -374,10 +382,11 @@ class MainWindow(ManagedWindow):
         print(self.directory)
         print('mydir', directory)
         #self.directory = r'C:\\Users\\Neil\\Documents'
-        print(self.inputs.inputs, meastype)
-        mtype = getattr(self.inputs.inputs, meastype)
-        print(mtype)
-        filename = unique_filename(directory)
+        #print(self.inputs, 'meastype')
+        mtype = getattr(self.inputs, 'meastype').parameter.value
+        print('About to do meastype: ', mtype)
+        prefix = 'rho_'# + mtype + '_'
+        filename = unique_filename(directory, prefix=prefix)
         #procedure = self.make_procedure()
 
         if procedure is None:

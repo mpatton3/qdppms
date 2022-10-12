@@ -333,6 +333,28 @@ class myKeithley6221(Keithley6221):
             swp = 'LOG'
         if sweeptype == 'logarithmic':
             swp = 'LOG'
+        if sweeptype == 'list':
+            swp = 'LIST'
+            crntup = np.linspace(-maxI, maxI, numpoints)
+            crntdn = np.linspace(maxI, -maxI, numpoints)
+            crnts = np.concatenate((crntup, crntdn))
+            dly = np.array([delay]*len(crnts))
+            tot_pts = len(crnts)
+            num_sends = int(tot_pts/90.) + (tot_pts % 90 > 0)
+
+            #crntlist = str(crnts).replace('[', '').replace(']', '').replace('  ', ',').lstrip(',')
+            crntlist = []
+            delaylist = []
+            for n in range(num_sends):
+                crntlist.append(','.join([str(x) for x in crnts[n*90:(n+1)*90]]))
+
+                delaylist.append(','.join([str(x) for x in dly[n*90:(n+1)*90]]))
+
+
+            #print('currents are', crntlist)
+            #print('delays are', delaylist)
+
+
 
         # Set up instrument for sweeps
         self.write("*RST")
@@ -354,12 +376,32 @@ class myKeithley6221(Keithley6221):
         self.write("SOUR:PDEL:LME 2")
 
         # Configure the sweep
-        self.write("SOUR:SWE:SPAC "+swp) # linear or log
-        self.write("SOUR:CURR:STAR "+str(-maxI))
-        self.write("SOUR:CURR:STOP "+str(maxI))
-        self.write("SOUR:CURR:STEP "+str(maxI/(numpoints-1.)))
-        print("SOUR:CURR:STEP "+str(maxI/(numpoints-1.)))
-        self.write("SOUR:DEL "+str(delay)) # DELAY 
+        self.write("SOUR:SWE:SPAC "+swp) # linear or log or list
+        if sweeptype == 'list':
+            print('in second sweep type list')
+            #crntlist = "0.001, 0.002, 0.003, 0.004, 0.003, 0.002, 0.001, 0.00"
+            self.write("SOUR:LIST:CURR "+crntlist[0]) #Only loads up to 100 at a time
+
+            for n in range(num_sends-1):
+                self.write("SOUR:LIST:CURR:APP "+crntlist[n+1])
+
+            self.write("SOUR:LIST:DEL "+delaylist[0]) # DELAY 
+
+            for n in range(num_sends-1):
+                self.write("SOUR:LIST:DEL:APP "+delaylist[n+1]) # DELAY 
+
+            self.write("SOUR:LIST:CURR:POIN?")
+            response = self.read()
+
+            print('Num I pts is ', response)
+ 
+        else:
+            self.write("SOUR:CURR:STAR "+str(-maxI))
+            self.write("SOUR:CURR:STOP "+str(maxI))
+            self.write("SOUR:CURR:STEP "+str(maxI/(numpoints-1.)))
+            print("SOUR:CURR:STEP "+str(maxI/(numpoints-1.)))
+
+            self.write("SOUR:DEL "+str(delay)) # DELAY 
         self.write("SOUR:SWE:RANG BEST") # BEST FIXED SOURCE RANGE 
         self.write("SOUR:SWE:COUN 1") # set sweep count to 1
         self.write("SOUR:SWE:CAB OFF") # disable compliance abort
@@ -424,6 +466,7 @@ class myKeithley6221(Keithley6221):
         num = len(self.curr)
         numin = int(num/6.)
         
+        #print(self.volt)
         p = np.polyfit(self.curr, self.volt, deg=1)
 
         # Check IV curve for nonlinearity by comparing low-values fit
@@ -443,7 +486,7 @@ class myKeithley6221(Keithley6221):
     def write_IV_file(self, temp, field, maxI, angle, sweeptype):
 
         
-        num = 0
+        num = 0 # change back to zero
         found_name = False
         while found_name == False:
             filename = 'IV_sweep_' + "{:.0f}".format(temp) + 'K_' + \

@@ -48,11 +48,11 @@ class TempSweep(Procedure):
     #DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R bridge 1', \
     #              'R bridge 2', 'R bridge 3', 'R bridge 4']
 
-    #DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R bridge 1', 'R bridge 2']
+    DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R bridge 1', 'R bridge 2']
 
-    DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R vdp 1', \
-                    'R vdp 2', 'R Hall 1', 'R Hall 2', 'R vdp 12', \
-                    'R vdp 22', 'R Hall 12', 'R Hall 22']
+    #DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R vdp 1', \
+    #                'R vdp 2', 'R Hall 1', 'R Hall 2', 'R vdp 12', \
+    #                'R vdp 22', 'R Hall 12', 'R Hall 22']
 
     def resistance_measure(self, config):
 
@@ -78,9 +78,9 @@ class TempSweep(Procedure):
         if config == 'c2':
             self.switch.clos_custom2()
         if config == 'cust1':
-            self.switch.clos_custom(5, 2, 7, 8) #5, 1, 6, 2
+            self.switch.clos_custom(5, 1, 4, 8) #5, 1, 6, 2
         if config == 'cust2':
-            self.switch.clos_custom(5, 2, 3, 7)
+            self.switch.clos_custom(5, 1, 4, 3)
         if config == 'cust3':
             self.switch.clos_custom(5, 2, 6, 1) #5, 1, 6, 2
         if config == 'cust4':
@@ -90,9 +90,9 @@ class TempSweep(Procedure):
 
         sleep(0.36)
 
-        res = self.currentsource.min_inloop_delta()
+        volt, vstd = self.currentsource.min_inloop_delta()
         self.switch.open_all()
-        return res/self.high_current
+        return volt/self.high_current
 
 
 
@@ -112,6 +112,8 @@ class TempSweep(Procedure):
         #self.currentsource.arm_preloop_delta(self.high_current, delta, swpct1, \
         #                                     swpct2, swpct3, npld, rvng, \
         #                                     swpct1)
+
+        self.currentsource.write("FORM:ELEM DEF")
         print('Done Startup')
 
 
@@ -131,6 +133,7 @@ class TempSweep(Procedure):
 
         # Add 3 ticks below to comment out for a different configuration
 
+        '''
 
         for c in configs:
 
@@ -176,13 +179,13 @@ class TempSweep(Procedure):
             '\g(m)\-(0)H': bfield, \
             #'\g(phi)': self.angle,\
             'R bridge 1': ress[0], \
-            'R bridge 2': ress[1], \
-            'R bridge 3': ress[2],\
-            'R bridge 4': ress[3]
+            'R bridge 2': ress[1]
+            #'R bridge 3': ress[2],\
+            #'R bridge 4': ress[3]
             })
         sleep(0.01)
 
-        '''
+        
         # comment out goes here for switching configs
         print('done emitting')
 
@@ -195,9 +198,9 @@ class TempSweep(Procedure):
         #self.ramprate = 13.3
         self.switch.set_pins(3,1,2,4)  # 1,3,4,2
         self.switch.set_pins2(7,5,6,8)  # 1,3,4,2
-        configs = ['vdp1', 'vdp2', 'Hall1', 'Hall2', 'vdp12', 'vdp22', 'Hall12', 'Hall22']
+        #configs = ['vdp1', 'vdp2', 'Hall1', 'Hall2', 'vdp12', 'vdp22', 'Hall12', 'Hall22']
         #configs = ['cust1', 'cust2', 'cust3', 'cust4']
-        #configs = ['cust1', 'cust2']
+        configs = ['cust1', 'cust2']
         ress = []
         ts = []
         bs = []
@@ -349,19 +352,20 @@ def main():
     #plt.show()
 
     # Edit below here
-    directory = r'C:\Users\maglab\Documents\Python Scripts\data\KTO\jk167'
+    directory = (r'C:\Users\maglab\Documents\Python Scripts\data\BPBO\B028'
+                 r'\dev10.8\220919') 
     os.chdir(directory)
-    data_filename = 'rho_v_T_50K_300K_KTO_jk167_0.csv'
+    data_filename = 'rho_v_T_30K_3K_B028_0.csv'
     #data_filename = 'rho_v_T_300K_300K_0kOe_jk61_1.csv'
 
     #angle = 360.0
     #print('angle ', angle)
-    setpoint = 300.0 # K
-    ramprate = 10.0 #K/min
+    setpoint = 2.0 # K
+    ramprate = 1.0 #K/min
     procedure = TempSweep(host, port, setpoint, ramprate)
 
     procedure.iterations = 1
-    procedure.high_current = 5.00e-6  # Amps
+    procedure.high_current = 300.0e-6  # Amps
     # Stop editing
     procedure.delta = 1.e-3
     procedure.swpct1 = 10 # 10

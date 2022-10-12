@@ -28,6 +28,7 @@ class IVSweep(Procedure):
         super().__init__()
 
     iterations = IntegerParameter('Measurement Number')
+    angle = FloatParameter('Probe Angle', units='deg', default=0.)
     start_temp = FloatParameter('Starting Temperature', units='K', default=300.)
     end_temp = FloatParameter('Ending Temperature', units='K', default=300.)
     temp_points = IntegerParameter('Number of Temp points', default = 50)
@@ -46,7 +47,7 @@ class IVSweep(Procedure):
     pulse_width = FloatParameter('Pulse Width', units='s', default=400.e-6)
 
 
-    DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R', \
+    DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'Angle', 'R', \
                     'NonLinear']
 
 
@@ -72,14 +73,25 @@ class IVSweep(Procedure):
         self.temp_to_meas = np.linspace(self.start_temp, self.end_temp, self.temp_points)
         self.field_to_meas = np.linspace(self.start_field, self.end_field,
                                          self.field_points)
+        fields_pos = np.linspace(self.start_field, self.end_field,
+                                         self.field_points)
+
+        fields_neg = np.linspace(-self.start_field, -self.end_field,
+                                          self.field_points)
+
+        # Edit here to switch between field sweep and angular sweep
+        self.field_to_meas = np.concatenate(([20000], fields_pos,
+                                    [-20000], fields_neg)) # for field sweep
+        #self.field_to_meas = [self.start_field] # for angl sweep
         #print(self.field_to_meas)
         sleep(0.1)
 
         # Set Switch Matrix
         self.switch.open_all()
         sleep(0.6)
-        self.switch.set_pins(3, 1, 2, 4)
-        self.switch.clos_vdp2()
+        #self.switch.set_pins(5, 1, 3, 8)
+        #self.switch.clos_vdp2()
+        self.switch.clos_custom(5, 1, 4, 8)
 
 
     def execute(self):
@@ -118,25 +130,29 @@ class IVSweep(Procedure):
                 #print(field_stable, temp_stable)
                 #print((field_stable and temp_stable))
                 #print((field_stable or temp_stable))
-                sleep(0.1)
+                sleep(0.2)
 
 
             print('Out of while loop and field ', b[0], ' temp ', t[0])
             tim = time() - self.starttime
-            
+
+            b = mv.query_field(self.host, self.port)
+            t = mv.query_temp(self.host, self.port)
+           
             for i in range(self.num_IV):
                 measstart = time()
                 self.currentsource.current_sweep_inloop()
                 meas_time = time() - measstart
                 print('IV time to run ', meas_time)
                 self.currentsource.write_IV_file(t[0], b[0], self.max_current,\
-                                         0., self.sweep_type)
+                                         self.angle, self.sweep_type)
 
                 res, nonlin = self.currentsource.IV_compute_res()
                 self.emit('results', {
                         'Time': tim,\
                         'Temperature': t[0],\
                         '\g(m)\-(0)H': b[0],\
+                        'Angle': self.angle,\
                         'R': res, \
                         'NonLinear': nonlin \
                         })
@@ -155,9 +171,10 @@ def main():
     now = datetime.now()
 
     # Start editing
-    directory = r'C:\Users\maglab\Documents\Python Scripts\data\KTO\jk244\IVs\2K_vdp2'
+    directory = (r'C:\Users\maglab\Documents\Python Scripts\data\BPBO'
+                 r'\B028\dev10.8\220919\300K_IVs_90deg_2')
     os.chdir(directory)
-    data_filename = 'IVsweeps_10uA_2K_0Oe_jk244_vdp2_0.csv'
+    data_filename = 'IVsweeps_7mA_300K_20000Oe_90deg_B028_1.csv'
 
 
     '''
@@ -168,24 +185,25 @@ def main():
     
 
     procedure.iterations = 1
-    procedure.max_current = 20.0e-6 # Amps
-    procedure.numberpoints = 401 # in IV sweep
-    procedure.num_IV = 6 # Number of IV sweeps at each point
-    procedure.start_temp = 2.2 # K
-    procedure.end_temp = 2.2 # K
+    procedure.angle = 90.
+    procedure.max_current = 7.0e-3 # Amps
+    procedure.numberpoints = 433 # in IV sweep, for list can only do up to 100
+    procedure.num_IV = 4 # Number of IV sweeps at each point
+    procedure.start_temp = 300. # K
+    procedure.end_temp = 300. # K
     procedure.temp_points = 1 # in Temp sweep
     procedure.temp_ramp = 3. # K/min ramp rate
-    procedure.start_field = 0. # K
-    procedure.end_field = 0. # K
-    procedure.field_points = 1 # in Temp sweep
-    procedure.field_ramp = 95. # K/min ramp rate
+    procedure.start_field = 15000. # Oe
+    procedure.end_field = 1000. # Oe
+    procedure.field_points = 29 # in Temp sweep
+    procedure.field_ramp = 100. # K/min ramp rate
+    procedure.sweep_type = 'list' # 'linear' for linear sweep, 'list' for custom
     # Stop editing
 
     procedure.delay = 1.e-1
     procedure.nplc = 3
     procedure.date = now.strftime("%m/%d/%Y, %H:%M:%S")
 
-    procedure.sweep_type = 'linear'
     procedure.pulse_width = 11000e-6
     procedure.rvng = 1.e1
 
