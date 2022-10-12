@@ -7,7 +7,7 @@
 import numpy as np
 import pandas as pd
 #import matplotlib.pyplot as plt
-log - logging.getLogger(__name___
+log - logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 
@@ -54,6 +54,7 @@ class TransportMeas(Procedure):
     tempramp = FloatParameter('Temperature Ramp Rate', default=3.)
     maxfield = FloatParameter('Maximum Field', default=0.)
     fieldramp = FloatParameter('Magnetic Field Ramp Rate', default=100.)
+    hysteresis = BooleanParameter('Do we expect a hysteresis?', default=False)
     pinconfig = Parameter('Pin Configuration', default='1vdP')
 
     if self.pinconfig == '1vdP':
@@ -146,12 +147,34 @@ class TransportMeas(Procedure):
         #for i in range(self.iterations):
 
         if self.meastype == 'Hall':
+
+            bfld = 0.
+
+            if self.hysteresis:
+            # Do any extra leg if we expect hysteresis
+
+                mv.set_field(self.host, self.port, -self.maxfield, 100)
+                sleep(1.8)
+                print('Hysteresis True so going to negative field.')
+
+                done = False
+                while not done: # wait until at max neg field
+                    done =  bfield[1] == self.stable_field 
+
+
             mv.set_field(self.host, self.port, self.maxfield, self.fieldramp)
             sleep(1.8)
-            bfld = 0.
+
+            done = False
+
+
+            mv.set_field(self.host, self.port, self.maxfield, self.fieldramp)
+            sleep(1.8)
             done = False
             print('about to measure')
             #while bfld < 0.999*self.maxb:
+
+
             while not done: # Run the first leg of the Hall sweep
 
                 print('Doing done loop')
@@ -313,17 +336,17 @@ class MainWindow(ManagedWindow):
             procedure_class=RandomProcedure,
             inputs=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
                     'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
-                    'tempramp', 'maxfield', 'fieldramp', 'pinconfig'],
+                    'tempramp', 'maxfield', 'fieldramp', 'hysteresis', 'pinconfig'],
             displays=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
                     'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
-                    'tempramp', 'maxfield', 'fieldramp', 'pinconfig'],
+                    'tempramp', 'maxfield', 'fieldramp', 'hysteresis', 'pinconfig'],
             x_axis='Iteration',
             y_axis='high_current',
             directory_input=True,
             sequencer=True,
             sequencer_inputs=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
                     'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
-                    'tempramp', 'maxfield', 'fieldramp', 'pinconfig'],
+                    'tempramp', 'maxfield', 'fieldramp', 'hysteresis', 'pinconfig'],
             #sequence_file="gui_sequencer_example_sequence.txt"
         )
         self.setWindowTitle('GUI Example')
