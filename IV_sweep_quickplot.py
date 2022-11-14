@@ -81,10 +81,10 @@ def bso_v_field(B, a, K, s):
 def main():
 
     directory = (r"R:\Lab Member Files\Tony Edgeton\Raw Data\Transport"
-                 r"\PPMS\B028\220820\300K_IVs_2")
+                 r"\PPMS\B028\dev10.8\220919\300K_IVs_90deg_2")
     os.chdir(directory)
 
-    filename = 'Delta_asym_2.5mA_300K_8kOe_90deg_B028_0.csv'
+    filename = 'Delta_asym_2.5mA_300K_8kOe_90deg_B028_1.csv'
 
     """
     # For Delta_asym files
@@ -95,33 +95,69 @@ def main():
     """
 
     # For individual IV sweep files
-    pos_ids = ['IV*_3000*.txt', 'IV*_3501*.txt', 'IV*_4000*.txt',
-               'IV*_4500*.txt', 'IV*_5000*.txt', 'IV*_5500*.txt',
-               'IV*_6000*.txt', 'IV*_7000*.txt', 'IV*_8001*.txt']
-    neg_ids = ['IV*_-3000*.txt', 'IV*_-3500*.txt', 'IV*_-4000*.txt',
-               'IV*_-4500*.txt', 'IV*_-5000*.txt', 'IV*_-5500*.txt',
-               'IV*_-6001*.txt', 'IV*_-7001*.txt', 'IV*_-8000*.txt']
-    measurement = []
-    flds = []
-    curvs = []
-    for i in range(9):
-        measurement.append(ud.IVMeasST())
-        measurement[-1].readfiles(pos_ids[i], neg_ids[i])
-        measurement[-1].find_quad(show=False)
-        flds.append(measurement[-1].field)
-        #print(flds)
-        curvs.append(measurement[-1].params_quad[0])
-        #print(curvs)
+    '''
+    pos_ids = ['IV*_3000*.txt', 'IV*_3231*.txt', 'IV*_3462*.txt', 
+               'IV*_3693*.txt', 'IV*_3923*.txt', 'IV*_4154*.txt',
+               'IV*_4385*.txt', 'IV*_4615*.txt', 'IV*_4846*.txt',
+               'IV*_5077*.txt', 'IV*_5308*.txt', 'IV*_5539*.txt',
+               'IV*_5770*.txt', 'IV*_5999*.txt', 'IV*_6231*.txt',
+               'IV*_6462*.txt', 'IV*_6693*.txt', 'IV*_6923*.txt',
+               'IV*_7154*.txt', 'IV*_7385*.txt', 'IV*_7616*.txt',
+               'IV*_7846*.txt', 'IV*_8077*.txt', 'IV*_8308*.txt', 
+               'IV*_8539*.txt', 'IV*_8770*.txt', 'IV*_9000O*.txt']
 
-    params, pcov = curve_fit(bso_v_field, flds, curvs, [-1800., 2400., 3.e-6])
+    '''
 
-    make_big_plot(measurement[0].rep_current, measurement)
+    # Field Sweep
+    indices = pd.read_csv('field_vals.txt', sep='\t', engine='python')
+    print(indices.head())
+    pos_ids = []
+    neg_ids = []
+    for i in range(len(indices)):
+        pos_ids.append('IV*_{0:.0f}Oe*.txt'.format(indices.iloc[i,0]))
+        neg_ids.append('IV*_{0:.0f}Oe*.txt'.format(indices.iloc[i,1]))
+    print(pos_ids)
+    '''
+    
+    # Angular Sweep
+    indices = pd.read_csv('angle_vals.txt', sep='\t', engine='python')
+    print(indices.head())
+    print(indices.angle[0])
+    ids = []
+    for i in range(len(indices)):
+        ids.append('IV*_{0:.0f}deg*.txt'.format(indices.angle[i]))
+    print(ids)
+
+    '''
+
+ 
+    #to_plot = [0, 3, 6, 9, 12, 15, 18, 22, 26]
+    #to_plot = [0, 1, 2, 3, 4, 5, 6, 8, 10]
+    #to_plot = [0, 1, 2, 3, 4, 6, 8, 10, 13] # _0, 100K
+    #to_plot = [0, 3, 6, 9, 12, 15, 18, 22, 26] # _1 10K
+    to_plot = [0, 1, 2, 3, 4, 6, 8, 10, 13] # _1 100K
+    #measurement = []
+    #flds = []
+    #curvs = []
+
+    measurement = ud.IVFieldSweep()
+    #measurement.one_field(pos_ids[24], neg_ids[24])
+
+    for i in range(len(pos_ids)):
+        measurement.one_field(pos_ids[i], neg_ids[i])
+
+    #params, pcov = curve_fit(bso_v_field, flds, curvs, [-1800., 2400., 3.e-6])
+
+    
+    #measurement.make_big_plot(to_plot)
+    measurement.fit_field(True)
+    measurement.write_summary_file('IVs_300K_02_90deg_summary.txt')
 
     #flistn = glob.glob('IV*-2600*.txt')
     #flistp = glob.glob('IV*2600*.txt')
-    plt.plot(flds, curvs)
-    plt.plot(flds, bso_v_field(flds, *params))
-    plt.show()
+    #plt.plot(flds, curvs)
+    #plt.plot(flds, bso_v_field(flds, *params))
+    #plt.show()
 
 
 

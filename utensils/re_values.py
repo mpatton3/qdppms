@@ -84,6 +84,32 @@ def get_meta_field(string):
     restring = ''
 
 
+def get_squid_range(string):
+    """Get the 'squid range' parameter, which is used to scale the voltage
+    data in the raw trace."""
+
+    restring = ('(?<=ge\s=\s)\d\d\d(?=;giv)|(?<=ge\s=\s)\d\d(?=;giv)|'
+                '(?<=ge\s=\s)\d(?=;giv)|(?<=ge\s=\s)\d\d\d\d(?=;giv)')
+
+    srang = re.findall(restring, string)
+    srange = float(srang[0])
+
+    return srange
+
+
+def get_low_field(string):
+    """Get the 'low field' parameter, which is used to know the field value
+    during the measurement."""
+
+    restring = ('(?<=ld\s=\s)\d+\S\d+(?=\sOe;)|(?<=ld\s=\s)\S\d+\S\d+(?=\sOe;)|'
+                '(?<=ld\s=\s)\d(?=\sOe;)|(?<=ld\s=\s)\d\d\d\d(?=\sOe;)')
+
+    fiel = re.findall(restring, string)
+    field = float(fiel[0])
+
+    return field
+
+
 def main():
 
     print('I compiled!')
