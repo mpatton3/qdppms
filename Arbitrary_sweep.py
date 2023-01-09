@@ -24,7 +24,7 @@ from pymeasure.display.windows import ManagedWindow
 from pymeasure.display import Plotter
 from pymeasure.adapters import VISAAdapter
 from pymeasure.experiment import Procedure, Results, Worker
-from pymeasure.experiment import IntegerParameter, FloatParameter, Parameter
+from pymeasure.experiment import IntegerParameter, FloatParameter, BooleanParameter, Parameter
 from pymeasure.experiment.results import unique_filename
 import ngcmeas.current_voltage as cv
 import ngcmeas.switch_matrix as sm
@@ -178,9 +178,11 @@ class TransportMeas(Procedure):
 
             if self.hysteresis:
                 mv.set_field(host, port, -self.maxfield, 100)
+                sleep(1.8)
                 done = False
                 while not done:
 
+                    relevant = self.in_loop(configs)
                     done = relevant[1] == self.stable_relevant 
 
 

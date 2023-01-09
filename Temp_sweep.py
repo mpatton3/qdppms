@@ -24,12 +24,12 @@ from PythonControl.parse_inputs import inputs
 
 class TempSweep(Procedure):
 
-    def __init__(self, host, port, setpoint, ramprate):
+    def __init__(self, host, port, setpoint, ramprate, angle):
         self.host = host
         self.port = port
         self.setpoint = setpoint
         self.ramprate = ramprate
-        #self.angle = angle
+        self.angle = angle
         super().__init__()
 
     iterations = IntegerParameter('Measurement Number')
@@ -48,7 +48,7 @@ class TempSweep(Procedure):
     #DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R bridge 1', \
     #              'R bridge 2', 'R bridge 3', 'R bridge 4']
 
-    DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R bridge 1', 'R bridge 2']
+    DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', '\g(phi)', 'R bridge 1', 'R bridge 2']
 
     #DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R vdp 1', \
     #                'R vdp 2', 'R Hall 1', 'R Hall 2', 'R vdp 12', \
@@ -78,13 +78,13 @@ class TempSweep(Procedure):
         if config == 'c2':
             self.switch.clos_custom2()
         if config == 'cust1':
-            self.switch.clos_custom(5, 1, 4, 8) #5, 1, 6, 2
+            self.switch.clos_custom(1, 2, 5, 9) #5, 1, 6, 2
         if config == 'cust2':
-            self.switch.clos_custom(5, 1, 4, 3)
+            self.switch.clos_custom(1, 2, 3, 5)
         if config == 'cust3':
-            self.switch.clos_custom(5, 2, 6, 1) #5, 1, 6, 2
+            self.switch.clos_custom(5, 9, 5, 9) #5, 1, 6, 2
         if config == 'cust4':
-            self.switch.clos_custom(5, 2, 1, 4)
+            self.switch.clos_custom(8, 6, 8, 6)
 
         #print('set sm')
 
@@ -177,7 +177,7 @@ class TempSweep(Procedure):
             'Time': tim, \
             'Temperature': temp[0], \
             '\g(m)\-(0)H': bfield, \
-            #'\g(phi)': self.angle,\
+            '\g(phi)': self.angle,\
             'R bridge 1': ress[0], \
             'R bridge 2': ress[1]
             #'R bridge 3': ress[2],\
@@ -201,6 +201,7 @@ class TempSweep(Procedure):
         #configs = ['vdp1', 'vdp2', 'Hall1', 'Hall2', 'vdp12', 'vdp22', 'Hall12', 'Hall22']
         #configs = ['cust1', 'cust2', 'cust3', 'cust4']
         configs = ['cust1', 'cust2']
+        #configs = ['cust3', 'cust4']
         ress = []
         ts = []
         bs = []
@@ -211,12 +212,13 @@ class TempSweep(Procedure):
         #for i in range(self.iterations):
 
         # Uncomment line below for normal operation
-        mv.set_temp(self.host, self.port, self.setpoint, self.ramprate)
+        #mv.set_temp(self.host, self.port, self.setpoint, self.ramprate)
         sleep(1.6)
         bfld = 0.
         done = False
         print('about to measure')
         #while bfld < 0.999*self.maxb:
+        i=0
         while not done:
 
             print('Doing done loop')
@@ -226,6 +228,8 @@ class TempSweep(Procedure):
 
             # Uncomment line below for normal operation
             done = temp[1] == self.stable_temp
+            done = i == 1
+            i += 1
 
             print(temp[1], done)
 
@@ -352,24 +356,23 @@ def main():
     #plt.show()
 
     # Edit below here
-    directory = (r'C:\Users\maglab\Documents\Python Scripts\data\BPBO\B028'
-                 r'\dev10.8\220919') 
+    directory = (r'C:\Users\maglab\Documents\Python Scripts\data\MGN\285_YY'
+                 r'\221210') 
     os.chdir(directory)
-    data_filename = 'rho_v_T_30K_3K_B028_0.csv'
-    #data_filename = 'rho_v_T_300K_300K_0kOe_jk61_1.csv'
+    data_filename = 'rho_v_phi_300K_10T_FC10T_45deg_MGN285_0.csv'
+    #data_filename = 'rho_v_T_400K_300K_10T_45deg_MGN285_0.csv'
 
-    #angle = 360.0
+    angle = 10.  
     #print('angle ', angle)
-    setpoint = 2.0 # K
-    ramprate = 1.0 #K/min
-    procedure = TempSweep(host, port, setpoint, ramprate)
+    setpoint = 300.0 # K
+    ramprate = 3.0 #K/min
+    procedure = TempSweep(host, port, setpoint, ramprate, angle)
 
     procedure.iterations = 1
-    procedure.high_current = 300.0e-6  # Amps
+    procedure.high_current = 370.0e-6  # Amps
     # Stop editing
     procedure.delta = 1.e-3
-    procedure.swpct1 = 10 # 10
-    procedure.swpct2 = 1
+    procedure.swpct1 = 40 # 10
     procedure.swpct2 = 1
     procedure.sswpct3 = 10
     procedure.nplc = 5 # 3

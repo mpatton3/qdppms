@@ -80,9 +80,9 @@ class IVSweep(Procedure):
                                           self.field_points)
 
         # Edit here to switch between field sweep and angular sweep
-        self.field_to_meas = np.concatenate(([20000], fields_pos,
-                                    [-20000], fields_neg)) # for field sweep
-        #self.field_to_meas = [self.start_field] # for angl sweep
+        #self.field_to_meas = np.concatenate(([20000], fields_pos,
+        #                            [-20000], fields_neg)) # for field sweep
+        self.field_to_meas = [self.start_field] # for angl sweep
         #print(self.field_to_meas)
         sleep(0.1)
 
@@ -91,7 +91,7 @@ class IVSweep(Procedure):
         sleep(0.6)
         #self.switch.set_pins(5, 1, 3, 8)
         #self.switch.clos_vdp2()
-        self.switch.clos_custom(5, 1, 4, 8)
+        self.switch.clos_custom(9, 8, 9, 8) #5, 1, 4, 8
 
 
     def execute(self):
@@ -171,10 +171,10 @@ def main():
     now = datetime.now()
 
     # Start editing
-    directory = (r'C:\Users\maglab\Documents\Python Scripts\data\BPBO'
-                 r'\B028\dev10.8\220919\300K_IVs_90deg_2')
+    directory = (r'C:\Users\maglab\Documents\Python Scripts\data\Ma_group'
+                 r'\AlN_Diamond_A5 and E3 for IV\400K_1T')
     os.chdir(directory)
-    data_filename = 'IVsweeps_7mA_300K_20000Oe_90deg_B028_1.csv'
+    data_filename = 'IVsweeps_5mA_400K_1T_7878_ch3_0.csv'
 
 
     '''
@@ -185,15 +185,15 @@ def main():
     
 
     procedure.iterations = 1
-    procedure.angle = 90.
-    procedure.max_current = 7.0e-3 # Amps
-    procedure.numberpoints = 433 # in IV sweep, for list can only do up to 100
-    procedure.num_IV = 4 # Number of IV sweeps at each point
-    procedure.start_temp = 300. # K
-    procedure.end_temp = 300. # K
+    procedure.angle = 00.
+    procedure.max_current = 5.0e-6 # Amps
+    procedure.numberpoints = 53 # in IV sweep, for list can only do up to 100
+    procedure.num_IV = 2 # Number of IV sweeps at each point
+    procedure.start_temp = 400. # K
+    procedure.end_temp = 400. # K
     procedure.temp_points = 1 # in Temp sweep
     procedure.temp_ramp = 3. # K/min ramp rate
-    procedure.start_field = 15000. # Oe
+    procedure.start_field = 10000. # Oe
     procedure.end_field = 1000. # Oe
     procedure.field_points = 29 # in Temp sweep
     procedure.field_ramp = 100. # K/min ramp rate
