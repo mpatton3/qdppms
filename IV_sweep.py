@@ -45,6 +45,13 @@ class IVSweep(Procedure):
     num_IV = IntegerParameter('Number of IV sweeps to take at each point', default=1)
     sweep_type = Parameter('linear or log', default = 'linear')
     pulse_width = FloatParameter('Pulse Width', units='s', default=400.e-6)
+    i_plus = IntegerParameter('Switch Column for I+', default=1)
+    i_minus = IntegerParameter('Switch Column for I-', default=1)
+    v_plus = IntegerParameter('Switch Column for V+', default=1)
+    v_minus = IntegerParameter('Switch Column for V-', default=1)
+
+
+
 
 
     DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'Angle', 'R', \
@@ -87,11 +94,23 @@ class IVSweep(Procedure):
         sleep(0.1)
 
         # Set Switch Matrix
+
+        # Change 7 -> 9 for switch matrix
+        if self.i_plus == 7:
+            self.i_plus = 9
+        if self.i_minus == 7:
+            self.i_minus = 9
+        if self.v_plus == 7:
+            self.v_plus = 9
+        if self.v_minus == 7:
+            self.v_minus = 9
+
         self.switch.open_all()
         sleep(0.6)
         #self.switch.set_pins(5, 1, 3, 8)
         #self.switch.clos_vdp2()
-        self.switch.clos_custom(9, 8, 9, 8) #5, 1, 4, 8
+        self.switch.clos_custom(self.i_plus, self.i_minus,
+                                self.v_plus, self.v_minus) #5, 1, 4, 8
 
 
     def execute(self):
@@ -171,10 +190,10 @@ def main():
     now = datetime.now()
 
     # Start editing
-    directory = (r'C:\Users\maglab\Documents\Python Scripts\data\Ma_group'
-                 r'\AlN_Diamond_A5 and E3 for IV\400K_1T')
+    directory = (r'C:\Users\maglab\Documents\Python Scripts\data\BPBO'
+                 r'\B028\dev10.7\230109\300K_IVs_90deg_0')
     os.chdir(directory)
-    data_filename = 'IVsweeps_5mA_400K_1T_7878_ch3_0.csv'
+    data_filename = 'IVsweeps_9mA_300K_15000Oe_7878_ch3_0.csv'
 
 
     '''
@@ -184,20 +203,24 @@ def main():
     procedure = IVSweep(host, port)
     
 
-    procedure.iterations = 1
-    procedure.angle = 00.
-    procedure.max_current = 5.0e-6 # Amps
-    procedure.numberpoints = 53 # in IV sweep, for list can only do up to 100
-    procedure.num_IV = 2 # Number of IV sweeps at each point
-    procedure.start_temp = 400. # K
-    procedure.end_temp = 400. # K
+    procedure.iterations = 1 # This is always 1
+    procedure.angle = 00. # Angle, deg, of the sample mount
+    procedure.max_current = 9.0e-3 # Amps
+    procedure.numberpoints = 433 # number of currents in IV sweep
+    procedure.num_IV = 4 # Number of IV sweeps at each point
+    procedure.start_temp = 300. # K
+    procedure.end_temp = 300. # K
     procedure.temp_points = 1 # in Temp sweep
     procedure.temp_ramp = 3. # K/min ramp rate
-    procedure.start_field = 10000. # Oe
+    procedure.start_field = 15000. # Oe
     procedure.end_field = 1000. # Oe
     procedure.field_points = 29 # in Temp sweep
     procedure.field_ramp = 100. # K/min ramp rate
     procedure.sweep_type = 'list' # 'linear' for linear sweep, 'list' for custom
+    procedure.i_plus = 5 # I+ switch pin
+    procedure.i_minus = 1 # I- switch pin
+    procedure.v_plus = 4 # V+ switch pin
+    procedure.v_minus = 8 # I- switch pin
     # Stop editing
 
     procedure.delay = 1.e-1
