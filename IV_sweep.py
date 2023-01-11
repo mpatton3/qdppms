@@ -37,6 +37,7 @@ class IVSweep(Procedure):
     end_field = FloatParameter('Ending Field', units='Oe', default=0.)
     field_points = IntegerParameter('Number of Field points', default = 50)
     field_ramp = FloatParameter('Field Ramp Rate', units='Oe/s', default=50.)
+    temporfield = Parameter('Change Temp or Field', default="Field")
     max_current = FloatParameter('Max Current', units='A', default=1.e-6)
     delay = FloatParameter('Delay', units='s', default=100.e-3)
     nplc = IntegerParameter('Num Power Line Cycles', default=3) #not used?
@@ -121,17 +122,17 @@ class IVSweep(Procedure):
         #for tmpmes in self.temp_to_meas:
         for fldmes in self.field_to_meas:
 
-            '''
-            # For changing temp
-            mv.set_temp(self.host, self.port, tmpmes, self.temp_ramp)
+            if self.temporfield == "Temp":
+                # For changing temp
+                mv.set_temp(self.host, self.port, tmpmes, self.temp_ramp)
 
-            print('going to '+str(tmpmes)+'K now')
-            '''
+                print('going to '+str(tmpmes)+'K now')
+           
+            if self.temporfield == "Field":
+                # For changing field
+                mv.set_field(self.host, self.port, fldmes, self.field_ramp)
 
-            # For changing field
-            mv.set_field(self.host, self.port, fldmes, self.field_ramp)
-
-            print('going to '+str(fldmes)+'Oe now')
+                print('going to '+str(fldmes)+'Oe now')
 
             sleep(1.8)
 
@@ -216,6 +217,7 @@ def main():
     procedure.end_field = 1000. # Oe
     procedure.field_points = 29 # in Temp sweep
     procedure.field_ramp = 100. # K/min ramp rate
+    procedure.temporfield = 'Field' # Change Temp or Field. Capitilize T/F
     procedure.sweep_type = 'list' # 'linear' for linear sweep, 'list' for custom
     procedure.i_plus = 5 # I+ switch pin
     procedure.i_minus = 1 # I- switch pin
