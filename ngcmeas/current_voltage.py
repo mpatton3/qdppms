@@ -609,6 +609,38 @@ class myKeithley6221(Keithley6221):
         data.to_csv(filename, sep = '\t', index=False)
         print('IV file written')
 
+    def send_pulse(self, pulse_current, pulse_length):
+
+        self.write("CURR:RANG "+str(pulse_current))
+        self.write("CURR "+str(pulse_current))
+        self.write("CURR:COMP 50")
+        sleep(0.05)
+
+        self.write("OUTP ON")
+        sleep(pulse_length)
+        self.write("OUTP OFF")
+
+
+    def meas_pulse(self, meas_current):
+
+
+        self.write("CURR:RANG "+str(meas_current))
+        self.write("CURR "+str(meas_current))
+        self.write("CURR:COMP 50")
+        sleep(0.05)
+
+        self.write("OUTP ON")
+
+        # This syntax is from 6221 ref p. 5-29
+        self.write("SYST:COMM:SER:SEND 'SENS:FUNC VOLT'")
+        self.write("SYST:COMM:SER:SEND 'SENS:DATA:FRES?'")
+        sleep(0.02)
+        resp = self.query("SYST:COMM:SER:ENT?")
+        print(resp)
+
+        self.write("OUTP OFF")
+
+        return resp
 
 
 class mySR830(SR830):
