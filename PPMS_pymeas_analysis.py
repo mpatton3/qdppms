@@ -19,18 +19,19 @@ from scipy.stats import linregress
 
 def main():
 
-    directory = (r"R:\Lab Member Files\Neil Campbell\Materials\Ma_group"
-                 r"\AlGaN_S2")
+    directory = (r"R:\Lab Member Files\Neil Campbell\Materials\antiperovskite"
+                 r"\Mn3NiN\Hallbar Pt_MNN bilayer")
     #directory = (r"R:\Lab Member Files\Ruiqi Sun\Transport\47_87")
     os.chdir(directory)
-    sname = 'S2_ch2'
+    sname = '77'
 
     #meas = 'temp' # hall or temp
-    thick = 1. #37.e-7 #32.03e-7  # thickness in cm
-    chnl = 2 # first (1) or second (2) vdp set, takes integer
-    anomalous = False # Do analysis for Anomalous Hall effect too?
+    thick = 60.e-7 #32.03e-7  # thickness in cm
+    chnl = "hb2" # first (1) or second (2) vdp set, takes integer,
+             # (hb1 for Hall bar)
+    anomalous = True # Do analysis for Anomalous Hall effect too?
 
-    fl = glob.glob('rho_2022*.csv')
+    fl = glob.glob('rho_2023*.csv')
     print(fl)
     #name = r'rho_v_T_300K_2T_Hall_0.raw'
 
