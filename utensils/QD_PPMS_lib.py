@@ -221,6 +221,12 @@ class VdP_Measurement:
             self.namevdp2 = 'R vdp 22'
             self.namehall1 = 'R Hall 12'
             self.namehall2 = 'R Hall 22'
+        if self.channel == "hb1":
+            self.namelng = "R Long 1"
+            self.namehll = "R Hall 1"
+        if self.channel == "hb2":
+            self.namelng = "R Long 2"
+            self.namehll = "R Hall 2"
  
     def compute_resistances(self):
         
@@ -231,19 +237,42 @@ class VdP_Measurement:
         
         for i in range(self.length):
 
-            self.rsqs.append(getrsq(self.data[self.namevdp1].loc[i],
-                             self.data[self.namevdp2].loc[i]))
+            if (self.channel == 1 or self.channel == 2):
+                self.rsqs.append(getrsq(self.data[self.namevdp1].loc[i],
+                                 self.data[self.namevdp2].loc[i]))
 
-            self.halls.append((self.data[self.namehall1].loc[i] 
-                               + self.data[self.namehall2].loc[i])/2.)
+                self.halls.append((self.data[self.namehall1].loc[i] 
+                                   + self.data[self.namehall2].loc[i])/2.)
 
-            rhoanis = ve.anst_from_vdp(self.data[self.namevdp1].loc[i],
-                                    self.data[self.namevdp2].loc[i], 1.)
-            self.rhoxs.append(rhoanis[0])
-            self.rhoys.append(rhoanis[1])
+                rhoanis = ve.anst_from_vdp(self.data[self.namevdp1].loc[i],
+                                        self.data[self.namevdp2].loc[i], 1.)
+                self.rhoxs.append(rhoanis[0])
+                self.rhoys.append(rhoanis[1])
 
+            if (self.channel == 'hb1' or self.channel == 'hb2'):
+                self.rsqs.append(self.data[self.namelng].loc[i])
+                self.halls.append(self.data[self.namehll].loc[i])
+                self.rhoxs.append(0.)
+                self.rhoys.append(0.)
+ 
         self.halls = pd.Series(self.halls)
 
+    def compute_resistances_hb(self):
+        """Same as compute_resistances() above, but for a Hall bar scenario.
+        Actually ended up implementing it in the above method by adding if
+        statement and using the self.channel attribute."""
+
+        self.rsqs = []
+        self.halls = []
+        self.rhoxs = []
+        self.rhoys = []
+ 
+        for i in range(self.length):
+            self.rsqs.append(self.data[self.namelng].loc[i])
+            self.halls.append(self.data[self.namehll].loc[i])
+            self.rhoxs.append(0.)
+            self.rhoys.append(0.)
+        
 
     def compute_params(self):
 
@@ -297,10 +326,17 @@ class VdP_Measurement:
 
     def list_append(self, lists):
 
-        lists[0].append(self.data[self.namevdp1].iloc[-1])
-        lists[1].append(self.data[self.namevdp2].iloc[-1])
-        lists[2].append(self.data[self.namehall1].iloc[-1])
-        lists[3].append(self.data[self.namehall2].iloc[-1])
+        if (self.channel == 1 or self.channel == 2):
+            lists[0].append(self.data[self.namevdp1].iloc[-1])
+            lists[1].append(self.data[self.namevdp2].iloc[-1])
+            lists[2].append(self.data[self.namehall1].iloc[-1])
+            lists[3].append(self.data[self.namehall2].iloc[-1])
+        if (self.channel == "hb1" or self.channel == "hb2"):
+            lists[0].append(self.data[self.namelng].iloc[-1])
+            lists[1].append(0.)
+            lists[2].append(self.data[self.namehll].iloc[-1])
+            lists[3].append(0.)
+
         lists[4].append(self.rsqs[-1])
         lists[5].append(self.rsqs[-1]*self.thick)
         lists[6].append(self.m*self.thick*10**8)
@@ -314,7 +350,8 @@ class VdP_Measurement:
 
     def write(self, newname):
 
-        df = pd.DataFrame({'Temperature': self.data['Temperature'], \
+        if (self.channel == 1 or self.channel == 2):
+            df = pd.DataFrame({'Temperature': self.data['Temperature'], \
                            '\g(m)\-(0)H': self.data['\g(m)\-(0)H'], \
                            'R vdP 1': self.data[self.namevdp1], \
                            'R vdP 2': self.data[self.namevdp2], \
@@ -325,7 +362,21 @@ class VdP_Measurement:
                            '\g(r)\-(xx)': pd.Series(self.rhoxs), \
                            '\g(r)\-(yy)': pd.Series(self.rhoys), \
                            'R\-(Hall)': self.halls })
-        
+
+        if (self.channel == "hb1" or self.channel == "hb2"):
+            df = pd.DataFrame({'Temperature': self.data['Temperature'], \
+                           '\g(m)\-(0)H': self.data['\g(m)\-(0)H'], \
+                           'R vdP 1': self.data[self.namelng], \
+                           'R vdP 2': np.zeros(self.length), \
+                           'R Hall 1': self.data[self.namehll], \
+                           'R Hall 2': np.zeros(self.length), \
+                           'Rsq': pd.Series(self.rsqs) , \
+                           '\g(r)': pd.Series(self.rsqs)*self.thick , \
+                           '\g(r)\-(xx)': pd.Series(self.rhoxs), \
+                           '\g(r)\-(yy)': pd.Series(self.rhoys), \
+                           'R\-(Hall)': self.halls })
+
+      
         df = df[['Temperature', '\g(m)\-(0)H', 'R vdP 1', 'R vdP 2', \
                  'R Hall 1', 'R Hall 2', 'Rsq', '\g(r)', \
                  '\g(r)\-(xx)', '\g(r)\-(yy)', 'R\-(Hall)']]
