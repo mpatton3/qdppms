@@ -176,24 +176,34 @@ class TransportMeas(Procedure):
         if self.meastype == 'Hall':
 
             print('Selected Hall')
+            bfld = 0.
 
             if self.hysteresis:
-                mv.set_field(host, port, -self.maxfield, 100)
+            # Do any extra leg if we expect hysteresis
+
+                mv.set_field(self.host, self.port, -self.maxfield, 100)
                 sleep(1.8)
+                print('Hysteresis True so going to negative field.')
+
                 done = False
-                while not done:
-
-                    relevant = self.in_loop(configs)
-                    done = relevant[1] == self.stable_relevant 
+                while not done: # wait until at max neg field
+                    done =  bfield[1] == self.stable_field 
 
 
-            mv.set_field(host, port, self.maxfield, self.fieldramp)
+            mv.set_field(self.host, self.port, self.maxfield, self.fieldramp)
             sleep(1.8)
-            print('Set Field')
-            bfld = 0.
+
+            done = False
+
+
+            mv.set_field(self.host, self.port, self.maxfield, self.fieldramp)
+            sleep(1.8)
+
             done = False
             print('about to measure')
             #while bfld < 0.999*self.maxb:
+
+
             while not done: # Run the first leg of the Hall sweep
 
                 print('Doing done loop')
@@ -377,8 +387,8 @@ class MainWindow(ManagedWindow):
             displays=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
                     'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
                     'tempramp', 'maxfield', 'fieldramp', 'hysteresis', 'pinconfig'],
-            x_axis='Time',
-            y_axis='Temperature',
+            x_axis='Iteration',
+            y_axis='high_current',
             directory_input=True,
             sequencer=True,
             sequencer_inputs=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
