@@ -13,7 +13,7 @@ import os
 import statistics as st
 from pymeasure.instruments import Instrument
 from pymeasure.adapters import VISAAdapter
-from time import sleep
+from time import sleep, time
 from pymeasure.instruments.keithley import Keithley6221
 from pymeasure.instruments.srs import SR830
 
@@ -626,8 +626,25 @@ class myKeithley6221(Keithley6221):
         sleep(pulse_length)
         self.write("OUTP OFF")
 
+    def start_current(self, current):
 
-    def meas_pulse(self, meas_current, num):
+        self.write("OUTP OFF")
+        sleep(0.2)
+
+        source_str = "SOUR:CURR "+str(pulse_current)
+        self.write("SOUR:CURR:RANG 0.1")#+str(pulse_current))
+        self.write(source_str)
+        self.write("CURR:COMP 15")
+        self.write("SYST:ERR?")
+        sleep(0.1)
+        resp = self.read()
+        print("Switch Pulse", resp)
+        print(source_str)
+        sleep(0.05)
+
+        self.write("OUTP ON")
+ 
+    def meas_pulse(self, meas_current, num, keep_output=True):
 
 
         self.write("SOUR:CURR:RANG 0.01") #+str(meas_current))
@@ -639,10 +656,10 @@ class myKeithley6221(Keithley6221):
         resp = self.read()
         print("Meas Pulse", resp)
  
-
-        self.write("OUTP ON")
-        sleep(0.3)
-        print("Meas current on")
+        if keep_output:
+            self.write("OUTP ON")
+            sleep(0.3)
+            print("Meas current on")
 
         # This syntax is from 6221 ref p. 5-29
         vs = []
@@ -675,7 +692,8 @@ class myKeithley6221(Keithley6221):
         voltage = np.median(vs)
         print("computed median", voltage)
 
-        self.write("OUTP OFF")
+        if keep_output:
+            self.write("OUTP OFF")
 
         return voltage
 
