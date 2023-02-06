@@ -132,8 +132,9 @@ class TransportMeas(Procedure):
         self.switch = sm.Keithley7001(KE7001adapter, "SwitchMatrix")
         print('instruments mapped')
         self.currentsource.reset()
-        self.currentsource.arm_preloop_delta(self.high_current, self.delta, self.swpct1, \
-                                             self.swpct2, self.swpct3, self.nplc, self.rvng, \
+        self.currentsource.arm_preloop_delta(self.high_current, self.delta, 
+                                             self.swpct1, self.swpct2, 
+                                             self.swpct3, self.nplc, self.rvng,
                                              self.swpct1)
         #self.currentsource.arm_preloop_delta(self.high_current, delta, swpct1, \
         #                                     swpct2, swpct3, npld, rvng, \
