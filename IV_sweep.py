@@ -14,6 +14,7 @@ import ngcmeas.current_voltage as cv
 from pymeasure.adapters import VISAAdapter
 from pymeasure.experiment import Procedure, Results, Worker
 from pymeasure.experiment import IntegerParameter, FloatParameter, Parameter
+from pymeasure.experiment import BooleanParameter
 import ngcmeas.current_voltage as cv
 import ngcmeas.switch_matrix as sm
 import MultiVu_talk_ngc as mv
@@ -37,6 +38,7 @@ class IVSweep(Procedure):
     end_field = FloatParameter('Ending Field', units='Oe', default=0.)
     field_points = IntegerParameter('Number of Field points', default = 50)
     field_ramp = FloatParameter('Field Ramp Rate', units='Oe/s', default=50.)
+    break_fields = BooleanParameter('Warm between Pos and Neg fields', default=False)
     temporfield = Parameter('Change Temp or Field', default="Field")
     max_current = FloatParameter('Max Current', units='A', default=1.e-6)
     delay = FloatParameter('Delay', units='s', default=100.e-3)
@@ -88,9 +90,9 @@ class IVSweep(Procedure):
                                           self.field_points)
 
         # Edit here to switch between field sweep and angular sweep
-        #self.field_to_meas = np.concatenate(([20000], fields_pos,
-        #                            [-20000], fields_neg)) # for field sweep
+        self.field_to_meas = np.concatenate((fields_pos, fields_neg)) # for field sweep
         self.field_to_meas = [self.start_field] # for angl sweep
+        #self.field_to_meas = fields_neg
         #print(self.field_to_meas)
         sleep(0.1)
 
@@ -120,6 +122,8 @@ class IVSweep(Procedure):
         self.stable_temp = r'"Stable"' 
 
         #for tmpmes in self.temp_to_meas:
+
+        fldnum = 0
         for fldmes in self.field_to_meas:
 
             if self.temporfield == "Temp":
@@ -131,6 +135,26 @@ class IVSweep(Procedure):
             if self.temporfield == "Field":
                 # For changing field
                 mv.set_field(self.host, self.port, fldmes, self.field_ramp)
+
+                if self.break_fields==True:
+                    if fldnum == self.field_points-1:
+                        mv.set_temp(self.host, self.port, 15., 3.)
+                        sleep(3)
+                        temp_temp_stable = False
+                        while not temp_temp_stable:
+                            t =  mv.query_temp(self.host, self.port)
+                            temp_temp_stable = t[1]
+                            sleep(0.5)
+
+                        sleep(120)
+                        mv.set_temp(self.host, self.port, start_temp, 3.)
+                        sleep(3)
+                        temp_temp_stable = False
+                        while not temp_temp_stable:
+                            t =  mv.query_temp(self.host, self.port)
+                            temp_temp_stable = t[1]
+                            sleep(0.5)
+
 
                 print('going to '+str(fldmes)+'Oe now')
 
@@ -179,6 +203,7 @@ class IVSweep(Procedure):
 
                 print('Done Emitting')
 
+            fldnum+=1 # update field number
 
         print('Done with Temps')
 
@@ -192,9 +217,9 @@ def main():
 
     # Start editing
     directory = (r'C:\Users\maglab\Documents\Python Scripts\data\BPBO'
-                 r'\B028\dev10.7\230109\300K_IVs_90deg_0')
+                 r'\B028\dev50.1\230205')
     os.chdir(directory)
-    data_filename = 'IVsweeps_9mA_300K_15000Oe_7878_ch3_0.csv'
+    data_filename = 'IVsweeps_2mA_300K_0T_4725_0.csv'
 
 
     '''
@@ -205,24 +230,25 @@ def main():
     
 
     procedure.iterations = 1 # This is always 1
-    procedure.angle = 00. # Angle, deg, of the sample mount
-    procedure.max_current = 9.0e-3 # Amps
+    procedure.angle = 90. # Angle, deg, of the sample mount
+    procedure.max_current = 2.e-3 # Amps
     procedure.numberpoints = 433 # number of currents in IV sweep
     procedure.num_IV = 4 # Number of IV sweeps at each point
     procedure.start_temp = 300. # K
     procedure.end_temp = 300. # K
     procedure.temp_points = 1 # in Temp sweep
     procedure.temp_ramp = 3. # K/min ramp rate
-    procedure.start_field = 15000. # Oe
-    procedure.end_field = 1000. # Oe
-    procedure.field_points = 29 # in Temp sweep
-    procedure.field_ramp = 100. # K/min ramp rate
+    procedure.start_field = 000000. # Oe
+    procedure.end_field = 000. # Oe
+    procedure.field_points = 21 # in Temp sweep
+    procedure.field_ramp = 60. # K/min ramp rate
+    procedure.break_fields = False # Warm between positive and neg fields
     procedure.temporfield = 'Field' # Change Temp or Field. Capitilize T/F
     procedure.sweep_type = 'list' # 'linear' for linear sweep, 'list' for custom
-    procedure.i_plus = 5 # I+ switch pin
-    procedure.i_minus = 1 # I- switch pin
-    procedure.v_plus = 4 # V+ switch pin
-    procedure.v_minus = 8 # I- switch pin
+    procedure.i_plus = 4 # I+ switch pin
+    procedure.i_minus = 7 # I- switch pin
+    procedure.v_plus = 2 # V+ switch pin
+    procedure.v_minus = 5 # I- switch pin
     # Stop editing
 
     procedure.delay = 1.e-1
