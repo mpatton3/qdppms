@@ -611,9 +611,15 @@ class myKeithley6221(Keithley6221):
 
     def send_pulse(self, pulse_current, pulse_length):
 
-        self.write("CURR:RANG "+str(pulse_current))
-        self.write("CURR "+str(pulse_current))
-        self.write("CURR:COMP 50")
+        source_str = "SOUR:CURR "+str(pulse_current)
+        self.write("SOUR:CURR:RANG 0.1")#+str(pulse_current))
+        self.write(source_str)
+        self.write("CURR:COMP 15")
+        self.write("SYST:ERR?")
+        sleep(0.1)
+        resp = self.read()
+        print("Switch Pulse", resp)
+        print(source_str)
         sleep(0.05)
 
         self.write("OUTP ON")
@@ -621,26 +627,57 @@ class myKeithley6221(Keithley6221):
         self.write("OUTP OFF")
 
 
-    def meas_pulse(self, meas_current):
+    def meas_pulse(self, meas_current, num):
 
 
-        self.write("CURR:RANG "+str(meas_current))
-        self.write("CURR "+str(meas_current))
-        self.write("CURR:COMP 50")
+        self.write("SOUR:CURR:RANG 0.01") #+str(meas_current))
+        self.write("SOUR:CURR "+str(meas_current))
+        self.write("SOUR:CURR:COMP 15")
         sleep(0.05)
+        self.write("SYST:ERR?")
+        sleep(0.1)
+        resp = self.read()
+        print("Meas Pulse", resp)
+ 
 
         self.write("OUTP ON")
+        sleep(0.3)
+        print("Meas current on")
 
         # This syntax is from 6221 ref p. 5-29
-        self.write("SYST:COMM:SER:SEND 'SENS:FUNC VOLT'")
-        self.write("SYST:COMM:SER:SEND 'SENS:DATA:FRES?'")
-        sleep(0.02)
-        resp = self.query("SYST:COMM:SER:ENT?")
-        print(resp)
+        vs = []
+        for i in range(num):
+
+            self.write("SYST:COMM:SER:SEND '*CLS'")
+            self.write("SYST:COMM:SER:SEND 'TRAC:CLE'")
+            self.write("SYST:COMM:SER:SEND 'FORM:ELEM READ,UNIT'")
+            self.write("SYST:COMM:SER:SEND 'SAMP:COUN 1'")
+  
+            self.write("SYST:COMM:SER:SEND 'SENS:FUNC VOLT'")
+            self.write("SYST:COMM:SER:SEND 'SENS:DATA:FRES?'")
+            print("Successful write again")
+            sleep(0.50)
+            self.write("SYST:COMM:SER:ENT?")
+            sleep(0.1)
+            resp = self.read()
+            print('original', resp)
+            resp = resp.strip().rstrip("VDC")
+            print('stripped', resp)
+            resp = float(resp)
+            #print('floating', resp)
+            sleep(0.03)
+            #print(resp)
+            vs.append(resp)
+        print("out of loop")
+        #vs = np.asarray(vs)
+        #print("cast as array")
+        print(vs)
+        voltage = np.median(vs)
+        print("computed median", voltage)
 
         self.write("OUTP OFF")
 
-        return resp
+        return voltage
 
 
 class mySR830(SR830):
