@@ -154,21 +154,18 @@ class MainWindow(ManagedWindow):
     def __init__(self):
         super().__init__(
                 procedure_class = CurrentPulse,
-                inputs = ["iterations", "pulse_current", "pulse_length", "wait",\
-                    "meas_current", "nplc", "date", "temperature", "field",\
-                    "pulse_ip", "pulse_im", "meas_ip", "meas_im", "meas_vp",\
-                    "meas_vm"],
-                displays = ["iterations", "pulse_current", "pulse_length", "wait",\
-                    "meas_current", "nplc", "date", "temperature", "field",\
-                    "pulse_ip", "pulse_im", "meas_ip", "meas_im", "meas_vp",\
-                    "meas_vm"],
+                inputs = ["iterations", "current", "pulse_length", "pulse_number",\
+                    "wait", "meas_current", "nplc", "date", "temperature", "field",\
+                    "meas_ip", "meas_im", "meas_vp", "meas_vm"],
+                displays = ["iterations", "current", "pulse_length", "pulse_number",\
+                    "wait", "meas_current", "nplc", "date", "temperature", "field",\
+                    "meas_ip", "meas_im", "meas_vp", "meas_vm"],
                 x_axis="Time", y_axis="Temperature",
                 directory_input=True,
                 sequencer=True,
-                sequencer_inputs = ["iterations", "pulse_current", "pulse_length", "wait",\
-                    "meas_current", "nplc", "date", "temperature", "field",\
-                    "pulse_ip", "pulse_im", "meas_ip", "meas_im", "meas_vp",\
-                    "meas_vm"],
+                sequencer_inputs = ["iterations", "current", "pulse_length", "pulse_number",\
+                    "wait", "meas_current", "nplc", "date", "temperature", "field",\
+                    "meas_ip", "meas_im", "meas_vp", "meas_vm"],
                 inputs_in_scrollarea=True)
 
         self.setWindowTitle("Pulsed Current")
