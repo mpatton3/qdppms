@@ -109,8 +109,9 @@ class CurrentPulse(Procedure):
 
         self.currentsource.write("FORM:ELEM DEF")
 
-        volts = self.currentsource.min_inloop_delta()
-
+        #volts = self.currentsource.min_inloop_delta()
+        volts = self.currentsource.meas_pulse(self.current, 10,
+                                        keep_output=False)
         #volts = self.currentsource.meas_pulse(self.meas_current, 5)
         print("did meas pulse")
         print(volts)
