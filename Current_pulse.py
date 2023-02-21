@@ -110,8 +110,8 @@ class CurrentPulse(Procedure):
         self.currentsource.write("FORM:ELEM DEF")
 
         #volts = self.currentsource.min_inloop_delta()
-        volts = self.currentsource.meas_pulse(self.current, 10,
-                                        keep_output=False)
+        volts = self.currentsource.meas_pulse(self.meas_current, 10,
+                                        keep_output=True)
         #volts = self.currentsource.meas_pulse(self.meas_current, 5)
         print("did meas pulse")
         print(volts)
@@ -133,7 +133,7 @@ class CurrentPulse(Procedure):
             "Pulse Length": self.pulse_length, \
             "Wait Time": self.wait, \
             "Measurement Current": self.meas_current, \
-            "Measurement Voltage": volts[0] \
+            "Measurement Voltage": volts \
             })
 
         print("Emit Successful!")
@@ -205,12 +205,12 @@ def main():
     window.show()
     sys.exit(app.exec_())
 
-    directory = r'C:\Users\maglab\Documents\Python Scripts\data\MNN\test_blank'
+    directory = r'C:\Users\maglab\Documents\Python Scripts\data\MNN\76_77\Current Pulse\2_17_2023\try1'
     os.chdir(directory)
     data_filename = 'funfunfun.csv'
 
     
-    procedure = intentionalmessupCurrentPulse()
+    procedure = CurrentPulse()
     procedure.iterations = 1
     procedure.pulse_current = 1.e-6 
     procedure.pulse_length = 0.5
