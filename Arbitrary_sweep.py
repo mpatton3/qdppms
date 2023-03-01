@@ -141,6 +141,9 @@ class TransportMeas(Procedure):
         #                                     swpct1)
         print('Done Startup')
 
+        # Assign host and port as attributes of class
+        self.host = host
+        self.port = port
         self.currentsource.write("FORM:ELEM DEF")
 
         sleep(0.1)
@@ -149,8 +152,8 @@ class TransportMeas(Procedure):
     def execute(self):
 
         #self.maxb = 100000.
-        self.switch.set_pins(1,3,4,2) #1,3,4,2
-        self.switch.set_pins2(5,9,8,6) #1,3,4,2 # 7 -> 9 b/c 7 is bad at SM
+        self.switch.set_pins(1,2,4,3) #1,3,4,2 Jieun wiring; 1243 Neil wiring
+        self.switch.set_pins2(5,6,8,9) #1,3,4,2 # 7 -> 9 b/c 7 is bad at SM
         if self.pinconfig == '1vdP':
              configs = ['vdp1', 'vdp2', 'Hall1', 'Hall2']
         if self.pinconfig == '2vdP':
@@ -179,7 +182,7 @@ class TransportMeas(Procedure):
             bfld = 0.
 
             if self.hysteresis:
-            # Do any extra leg if we expect hysteresis
+            # Do an extra leg if we expect hysteresis
 
                 mv.set_field(self.host, self.port, -self.maxfield, 100)
                 sleep(1.8)
@@ -190,8 +193,10 @@ class TransportMeas(Procedure):
                     done =  bfield[1] == self.stable_field 
 
 
+            print("About to set field")
             mv.set_field(self.host, self.port, self.maxfield, self.fieldramp)
             sleep(1.8)
+            print("set field")
 
             done = False
 
@@ -387,8 +392,8 @@ class MainWindow(ManagedWindow):
             displays=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
                     'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
                     'tempramp', 'maxfield', 'fieldramp', 'hysteresis', 'pinconfig'],
-            x_axis='Iteration',
-            y_axis='high_current',
+            x_axis='Time',
+            y_axis='R vdp 1',
             directory_input=True,
             sequencer=True,
             sequencer_inputs=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\

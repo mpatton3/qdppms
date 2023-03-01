@@ -23,11 +23,12 @@ from PythonControl.parse_inputs import inputs
 
 class HallSweep(Procedure):
 
-    def __init__(self, host, port, maxb, ramprate):
+    def __init__(self, host, port, maxb, ramprate, angle):
         self.host = host
         self.port = port
         self.maxb = maxb
         self.ramprate = ramprate
+        self.angle = angle
         super().__init__()
 
     iterations = IntegerParameter('Measurement Number')
@@ -43,8 +44,8 @@ class HallSweep(Procedure):
     #DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R vdp 1', \
     #                'R vdp 2', 'R Hall 1', 'R Hall 2']
 
-    #DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R bridge 1', \
-    #              'R bridge 2', 'R bridge 3', 'R bridge 4']
+    DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', '\g(phi)', 'R bridge 1', \
+                  'R bridge 2', 'R bridge 3', 'R bridge 4']
 
     #DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R bridge 1']
 
@@ -54,8 +55,8 @@ class HallSweep(Procedure):
     #                'R vdp 22', 'R Hall 12', 'R Hall 22']
 
 
-    DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R bridge 1', \
-                    'R bridge 2']
+    #DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R bridge 1', \
+    #               'R bridge 2']
 
 
     def resistance_measure(self, config):
@@ -82,13 +83,13 @@ class HallSweep(Procedure):
         if config == 'c2':
             self.switch.clos_custom2()
         if config == 'cust1':
-            self.switch.clos_custom(5, 1, 4, 8) #5, 1, 6, 2
+            self.switch.clos_custom(1, 2, 3, 9) #5, 1, 6, 2
         if config == 'cust2':
-            self.switch.clos_custom(5, 1, 4, 3)
+            self.switch.clos_custom(1, 2, 3, 5)
         if config == 'cust3':
-            self.switch.clos_custom(5, 2, 6, 1) #5, 1, 6, 2
+            self.switch.clos_custom(1, 2, 8, 4) #5, 1, 6, 2
         if config == 'cust4':
-            self.switch.clos_custom(5, 2, 1, 4)
+            self.switch.clos_custom(1, 2, 8, 6)
 
         sleep(0.36)
 
@@ -170,11 +171,11 @@ class HallSweep(Procedure):
             'Time': tim, \
             'Temperature': temp, \
             '\g(m)\-(0)H': bfield[0], \
-            #'\g(phi)': self.angle,\
+            '\g(phi)': self.angle,\
             'R bridge 1': ress[0], \
-            'R bridge 2': ress[1]
-            #'R bridge 3': ress[2],\
-            #'R bridge 4': ress[3]
+            'R bridge 2': ress[1], \
+            'R bridge 3': ress[2],\
+            'R bridge 4': ress[3]
             })
         sleep(0.01)
 
@@ -196,7 +197,7 @@ class HallSweep(Procedure):
         print('set all pins')
         #configs = ['vdp1', 'vdp2', 'Hall1', 'Hall2', 'vdp12', 'vdp22', 'Hall12', 'Hall22']
         #configs = ['c1', 'c2']
-        configs = ['cust1', 'cust2']#, 'cust3', 'cust4']
+        configs = ['cust1', 'cust2', 'cust3', 'cust4']
 
         ress = []
         ts = []
@@ -347,18 +348,18 @@ def main():
 
 
     #start editing
-    directory = (r'C:\Users\maglab\Documents\Python Scripts\data\BPBO\B028'
-                 r'\dev10.8\220919')
+    directory = (r'C:\Users\maglab\Documents\Python Scripts\data\RuO2'
+                 r'\119_075')
     os.chdir(directory)
-    data_filename = 'rho_v_B_300uA_300K_2.0T_00deg_B028_0.csv'
+    data_filename = 'rho_v_B_100uA_300K_10T_90deg_RuO2_0.csv'
 
-
-    setpoint = 20000 # max B in Oe
-    ramprate = 30   # field ramp in Oe/sec
-    procedure = HallSweep(host, port, setpoint, ramprate)
+    angle=90.
+    setpoint = 100000 # max B in Oe
+    ramprate = 40   # field ramp in Oe/sec
+    procedure = HallSweep(host, port, setpoint, ramprate, angle)
 
     procedure.iterations = 1
-    procedure.high_current = 300.0e-6 # Amps
+    procedure.high_current = 100.0e-6 # Amps
     # Stop editing
     procedure.delta = 1.e-3
     procedure.swpct1 = 10

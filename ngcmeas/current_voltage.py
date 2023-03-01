@@ -630,8 +630,9 @@ class myKeithley6221(Keithley6221):
 
         self.write("OUTP OFF")
         sleep(0.2)
+        print("output off now.")
 
-        source_str = "SOUR:CURR "+str(pulse_current)
+        source_str = "SOUR:CURR "+str(current)
         self.write("SOUR:CURR:RANG 0.1")#+str(pulse_current))
         self.write(source_str)
         self.write("CURR:COMP 15")
@@ -643,20 +644,32 @@ class myKeithley6221(Keithley6221):
         sleep(0.05)
 
         self.write("OUTP ON")
+        print("output on now.")
  
-    def meas_pulse(self, meas_current, num, keep_output=True):
+    def qeury_voltmeter_error(self):
 
-
-        self.write("SOUR:CURR:RANG 0.01") #+str(meas_current))
-        self.write("SOUR:CURR "+str(meas_current))
-        self.write("SOUR:CURR:COMP 15")
-        sleep(0.05)
+        # Query Error
         self.write("SYST:ERR?")
         sleep(0.1)
         resp = self.read()
         print("Meas Pulse", resp)
  
+        return resp
+    
+    def meas_pulse(self, meas_current, num, keep_output=True):
+
+
+        #self.write("SOUR:CURR:RANG 0.01") #+str(meas_current))
+        #self.write("SOUR:CURR "+str(meas_current))
+        #self.write("SOUR:CURR:COMP 15")
+        #sleep(0.05)
+        #self.write("SYST:ERR?")
+        #sleep(0.1)
+        #resp = self.read()
+        #print("Meas Pulse", resp)
+ 
         if keep_output:
+            print("about to turn current on")
             self.write("OUTP ON")
             sleep(0.3)
             print("Meas current on")
@@ -669,23 +682,104 @@ class myKeithley6221(Keithley6221):
             self.write("SYST:COMM:SER:SEND 'TRAC:CLE'")
             self.write("SYST:COMM:SER:SEND 'FORM:ELEM READ,UNIT'")
             self.write("SYST:COMM:SER:SEND 'SAMP:COUN 1'")
-  
-            self.write("SYST:COMM:SER:SEND 'SENS:FUNC VOLT'")
-            self.write("SYST:COMM:SER:SEND 'SENS:DATA:FRES?'")
-            print("Successful write again")
-            sleep(0.50)
+
+            self.write("SYST:COMM:SER:SEND 'SENS:FUNC \"VOLT:DC\"'")
+            self.write("SYST:COMM:SER:SEND 'SENS:VOLT:DC:RANG 0.001")
+
+            self.write("SYST:COMM:SER:SEND 'SENS:VOLT:DC:NPLC 5")
+            sleep(0.05)
+            #self.write("SYST:COMM:SER:SEND 'SENS:DATA:FRES?'")
+            self.write("SYST:COMM:SER:SEND ':FETC?'")
+            #print("Successful write again")
+            sleep(0.50) # If this is shorter the response won't arrive in time for read
             self.write("SYST:COMM:SER:ENT?")
             sleep(0.1)
             resp = self.read()
             print('original', resp)
             resp = resp.strip().rstrip("VDC")
-            print('stripped', resp)
+            #print('stripped', resp)
             resp = float(resp)
             #print('floating', resp)
             sleep(0.03)
             #print(resp)
             vs.append(resp)
-        print("out of loop")
+        #print("out of loop")
+        #vs = np.asarray(vs)
+        #print("cast as array")
+        print(vs)
+        voltage = np.median(vs)
+        print("computed median", voltage)
+
+        if keep_output:
+            self.write("OUTP OFF")
+
+        return voltage
+
+
+    def meas_pulse2(self, meas_current, num, keep_output=True):
+
+
+        self.write("SOUR:CURR:RANG 0.01") #+str(meas_current))
+        self.write("SOUR:CURR "+str(meas_current))
+        #self.write("SOUR:CURR:COMP 15")
+        sleep(0.05)
+        self.write("SYST:ERR?")
+        sleep(0.1)
+        resp = self.read()
+        print("Meas Pulse", resp)
+ 
+        if keep_output:
+            print("about to turn current on")
+            self.write("OUTP ON")
+            sleep(0.3)
+            print("Meas current on")
+
+        # This syntax is from 6221 ref p. 5-29
+        vs = []
+        for i in range(num):
+
+            self.write("SYST:COMM:SER:SEND '*CLS'")
+            self.write("SYST:COMM:SER:SEND 'SENS:FUNC \"VOLT:DC\"'")
+
+            #self.write("SYST:COMM:SER:SEND 'SENS:VOLT:DC:RANG 0.01")
+            #self.write("SYST:COMM:SER:SEND 'SENS:VOLT:DC:NPLC 5")
+            self.write("SYST:COMM:SER:SEND 'TRAC:CLE'")
+            self.write("SYST:COMM:SER:SEND ':ABOR'")
+
+            self.write("SYST:COMM:SER:SEND 'INIT:CONT OFF'")
+ 
+            self.write("SYST:COMM:SER:SEND 'SAMP:COUN 4'")
+            sleep(0.5)
+            self.write("SYST:COMM:SER:SEND ':INIT:IMM'")
+            #self.write("SYST:COMM:SER:SEND 'FORM:ELEM READ,UNIT'")
+
+            # Query Error
+            #self.query_voltmeter_error()
+            self.write("SYST:ERR?")
+            sleep(0.1)
+            resp = self.read()
+            print("Meas Pulse", resp)
+ 
+            sleep(0.05)
+            #self.write("SYST:COMM:SER:SEND 'SENS:DATA:FRES?'")
+            self.write("SYST:COMM:SER:SEND ':FETC?'")
+            #print("Successful write again")
+            sleep(0.50) # If this is shorter the response won't arrive in time for read
+            self.write("SYST:COMM:SER:ENT?")
+            sleep(0.1)
+            resp = self.read()
+            print('original', resp)
+            resp_str = resp.split(',')
+            print(resp_str)
+            resp_str = [float(rsp.strip().rstrip("VDC")) for rsp in resp_str]
+            print('stripped', resp_str)
+            volt = np.mean(resp_str)
+            #resp = float(resp)
+            print('to write', volt)
+            sleep(0.03)
+            #print(resp)
+            vs.append(volt)
+        #print("out of loop")
         #vs = np.asarray(vs)
         #print("cast as array")
         print(vs)

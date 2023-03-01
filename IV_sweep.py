@@ -217,9 +217,9 @@ def main():
 
     # Start editing
     directory = (r'C:\Users\maglab\Documents\Python Scripts\data\BPBO'
-                 r'\B028\dev50.1\230205')
+                 r'\B028\dev50.1\230208')
     os.chdir(directory)
-    data_filename = 'IVsweeps_2mA_300K_0T_4725_0.csv'
+    data_filename = 'IVsweeps_0.6mA_3K_0T_4725_0.csv'
 
 
     '''
@@ -231,11 +231,11 @@ def main():
 
     procedure.iterations = 1 # This is always 1
     procedure.angle = 90. # Angle, deg, of the sample mount
-    procedure.max_current = 2.e-3 # Amps
-    procedure.numberpoints = 433 # number of currents in IV sweep
+    procedure.max_current = 0.6e-3 # Amps
+    procedure.numberpoints = 848 # number of currents in IV sweep
     procedure.num_IV = 4 # Number of IV sweeps at each point
-    procedure.start_temp = 300. # K
-    procedure.end_temp = 300. # K
+    procedure.start_temp = 3. # K
+    procedure.end_temp = 3. # K
     procedure.temp_points = 1 # in Temp sweep
     procedure.temp_ramp = 3. # K/min ramp rate
     procedure.start_field = 000000. # Oe
