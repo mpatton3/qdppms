@@ -81,9 +81,13 @@ class CurrentPulse(Procedure):
         self.switch = sm.Keithley7001(KE7001adapter, "SwitchMatrix")
         print('instruments mapped')
         self.currentsource.reset()
-        self.currentsource.write("SYST:COMM:SER:SEND 'VOLT:RANG AUTO'")
+        #self.currentsource.write("SYST:COMM:SER:SEND 'VOLT:RANG AUTO'")
         sleep(0.1)
-        
+
+        #self.write("SYST:COMM:SER:SEND '*CLS'")
+        #self.write("SYST:COMM:SER:SEND 'SENS:FUNC \"VOLT:DC\"'")
+
+ 
         self.time_init = time()
         print("Done Startup")
 
@@ -110,7 +114,7 @@ class CurrentPulse(Procedure):
         self.currentsource.write("FORM:ELEM DEF")
         print("Current Write Sent")
         #volts = self.currentsource.min_inloop_delta()
-        volts = self.currentsource.meas_pulse2(self.meas_current, 5,
+        volts = self.currentsource.meas_pulse2(self.meas_current, 8,
                                         keep_output=True)
         #volts = self.currentsource.meas_pulse(self.meas_current, 5)
         print("did meas pulse")

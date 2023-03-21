@@ -9,6 +9,7 @@
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import os
 import statistics as st
 from pymeasure.instruments import Instrument
@@ -648,7 +649,7 @@ class myKeithley6221(Keithley6221):
  
     def qeury_voltmeter_error(self):
 
-        # Query Error
+        # Query Error 6221 error now
         self.write("SYST:ERR?")
         sleep(0.1)
         resp = self.read()
@@ -731,24 +732,80 @@ class myKeithley6221(Keithley6221):
         if keep_output:
             print("about to turn current on")
             self.write("OUTP ON")
-            sleep(0.3)
+            sleep(1.3)
             print("Meas current on")
+
+        self.write("SYST:COMM:SER:SEND '*CLS'")
+        self.write("SYST:COMM:SER:SEND 'SENS:FUNC \"VOLT:DC\"'")
+
+        self.write("SYST:COMM:SER:SEND 'TRAC:CLE'")
+        self.write("SYST:COMM:SER:SEND ':ABOR'")
+
+        # Query to remove excess from voltmeter buffer
+        self.write("SYST:COMM:SER:ENT?")
+        sleep(0.1)
+        vresp = self.read()
+        print("Excess in Voltmeter buffer ", vresp)
+ 
+        #self.write("SYST:COMM:SER:SEND 'INIT:CONT OFF'")
+
+        self.write("SYST:COMM:SER:SEND 'SAMP:COUN 3'")
+        #self.write("SYST:COMM:SER:SEND ':FETC?'")
+        #print("Successful write again")
+        #sleep(2.1) # If this is shorter (than 0.5 for count=4)
+                    #the response won't arrive in time for read
+        #self.write("SYST:COMM:SER:ENT?")
+        #sleep(0.1)
+        #resp = self.read()
+        #print('original', resp)
+ 
+
+        sleep(0.5)
 
         # This syntax is from 6221 ref p. 5-29
         vs = []
-        for i in range(num):
+        allmeas = []
+        for i in range(2*num):
 
-            self.write("SYST:COMM:SER:SEND '*CLS'")
-            self.write("SYST:COMM:SER:SEND 'SENS:FUNC \"VOLT:DC\"'")
+            self.write("OUTP OFF")
+            sleep(0.3)
+ 
+            self.write("SOUR:CURR "+str(i%2*meas_current))
+            sleep(0.1)
+ 
+            print("about to turn current on")
+            self.write("OUTP ON")
+            sleep(1.3)
+            print("Meas current on")
 
+
+            #self.write("SYST:COMM:SER:SEND '*CLS'")
+            #self.write("SYST:COMM:SER:SEND 'SENS:FUNC \"VOLT:DC\"'")
+
+            # next 2 lines were long gone.
             #self.write("SYST:COMM:SER:SEND 'SENS:VOLT:DC:RANG 0.01")
             #self.write("SYST:COMM:SER:SEND 'SENS:VOLT:DC:NPLC 5")
-            self.write("SYST:COMM:SER:SEND 'TRAC:CLE'")
-            self.write("SYST:COMM:SER:SEND ':ABOR'")
+            #self.write("SYST:COMM:SER:SEND 'TRAC:CLE'")
+            #self.write("SYST:COMM:SER:SEND ':ABOR'")
 
             self.write("SYST:COMM:SER:SEND 'INIT:CONT OFF'")
+
+            # Query Error
+            self.write("SYST:COMM:SER:SEND ':SYST:ERR?'")
+            sleep(0.2)
+            self.write("SYST:COMM:SER:ENT?")
+            sleep(0.1)
+            vresp = self.read()
+            print("Voltmeter Error ", vresp)
+            sleep(0.1)
+            #self.query_voltmeter_error()
+            self.write("SYST:ERR?")
+            sleep(0.1)
+            resp = self.read()
+            print("Meas Pulse", resp)
  
-            self.write("SYST:COMM:SER:SEND 'SAMP:COUN 4'")
+
+            #self.write("SYST:COMM:SER:SEND 'SAMP:COUN 4'")
             sleep(0.5)
             self.write("SYST:COMM:SER:SEND ':INIT:IMM'")
             #self.write("SYST:COMM:SER:SEND 'FORM:ELEM READ,UNIT'")
@@ -759,20 +816,51 @@ class myKeithley6221(Keithley6221):
             sleep(0.1)
             resp = self.read()
             print("Meas Pulse", resp)
+            # Query Error
+            self.write("SYST:COMM:SER:SEND ':SYST:ERR?'")
+            sleep(0.2)
+            self.write("SYST:COMM:SER:ENT?")
+            sleep(0.1)
+            vresp = self.read()
+            print("Voltmeter Error ", vresp)
  
-            sleep(0.05)
+            sleep(0.1) # was fine at 0.05, 0.1 if after reading from 2182a
             #self.write("SYST:COMM:SER:SEND 'SENS:DATA:FRES?'")
             self.write("SYST:COMM:SER:SEND ':FETC?'")
             #print("Successful write again")
-            sleep(0.50) # If this is shorter the response won't arrive in time for read
+            #sleep(0.86) # If this is shorter (than 0.5 for count=4)
+                        #the response won't arrive in time for read
+            stillprocessing = True
+            while stillprocessing:
+
+                self.write("SYST:COMM:SER:ENT?")
+                sleep(0.05)
+                resp = self.read()
+                if len(resp) > 5:
+                    stillprocessing = False
+                    print('original', resp, len(resp))
+
+                if len(resp) == 255:
+                    self.write("SYST:COMM:SER:ENT?")
+                    sleep(0.05)
+                    resp2 = self.read()
+                    resp = resp.strip() + resp2.strip()
+                    print("New orig in ", resp)
+
+            # check buffer again
+            '''
+            sleep(0.5)
             self.write("SYST:COMM:SER:ENT?")
             sleep(0.1)
             resp = self.read()
-            print('original', resp)
+            print('original2 ', resp)
+            '''
             resp_str = resp.split(',')
-            print(resp_str)
+            #print(resp_str)
             resp_str = [float(rsp.strip().rstrip("VDC")) for rsp in resp_str]
             print('stripped', resp_str)
+
+            allmeas.append(resp_str)
             volt = np.mean(resp_str)
             #resp = float(resp)
             print('to write', volt)
@@ -789,6 +877,21 @@ class myKeithley6221(Keithley6221):
         if keep_output:
             self.write("OUTP OFF")
 
+        allmeas_df = pd.DataFrame(allmeas).transpose()
+        all_mean = allmeas_df.mean()
+        print(all_mean)
+        allmeas_df.to_csv("all_meas.txt", index=False)
+
+        print("After writing")
+        print('Iterand', all_mean.shape[0]/2.)
+        diffs = []
+        for k in range(num):
+            diff = all_mean[2*k+1] - all_mean[2*k]
+            print(k, diff)
+            diffs.append(diff)
+        voltage = np.mean(diffs)
+        print("For posterity", voltage)
+ 
         return voltage
 
 
