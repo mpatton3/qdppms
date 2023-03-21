@@ -70,11 +70,11 @@ class IVSweep(Procedure):
         self.currentsource = cv.myKeithley6221(KE6221adapter)
         self.switch = sm.Keithley7001(KE7001adapter, "SwitchMatrix")
         print('instruments mapped')
-        self.currentsource.reset() 
+        self.currentsource.reset()
         self.currentsource.current_sweep_setup(self.max_current, \
                 self.numberpoints, self.sweep_type, self.delay, \
                 self.nplc, self.pulse_width)
-    
+
         self.starttime = time()
         print('Done Startup')
 
@@ -115,23 +115,26 @@ class IVSweep(Procedure):
         self.switch.clos_custom(self.i_plus, self.i_minus,
                                 self.v_plus, self.v_minus) #5, 1, 4, 8
 
+        print("Going to Execute")
+
 
     def execute(self):
 
         self.stable_field = r'"Holding (Driven)"'
-        self.stable_temp = r'"Stable"' 
+        self.stable_temp = r'"Stable"'
 
-        #for tmpmes in self.temp_to_meas:
-
+        # Edit this for temp/field
         fldnum = 0
-        for fldmes in self.field_to_meas:
+        for tmpmes in self.temp_to_meas:
+
+        #for fldmes in self.field_to_meas:
 
             if self.temporfield == "Temp":
                 # For changing temp
                 mv.set_temp(self.host, self.port, tmpmes, self.temp_ramp)
 
                 print('going to '+str(tmpmes)+'K now')
-           
+
             if self.temporfield == "Field":
                 # For changing field
                 mv.set_field(self.host, self.port, fldmes, self.field_ramp)
@@ -182,7 +185,7 @@ class IVSweep(Procedure):
 
             b = mv.query_field(self.host, self.port)
             t = mv.query_temp(self.host, self.port)
-           
+
             for i in range(self.num_IV):
                 measstart = time()
                 self.currentsource.current_sweep_inloop()
@@ -217,9 +220,9 @@ def main():
 
     # Start editing
     directory = (r'C:\Users\maglab\Documents\Python Scripts\data\BPBO'
-                 r'\B028\dev50.1\230208')
+                 r'\B031\230320')
     os.chdir(directory)
-    data_filename = 'IVsweeps_0.6mA_3K_0T_4725_0.csv'
+    data_filename = 'IVsweeps_1mA_3K_0T_B031_0.csv'
 
 
     '''
@@ -227,28 +230,28 @@ def main():
     ramprate = 100   # field ramp in Oe/sec
     '''
     procedure = IVSweep(host, port)
-    
+
 
     procedure.iterations = 1 # This is always 1
     procedure.angle = 90. # Angle, deg, of the sample mount
-    procedure.max_current = 0.6e-3 # Amps
-    procedure.numberpoints = 848 # number of currents in IV sweep
-    procedure.num_IV = 4 # Number of IV sweeps at each point
+    procedure.max_current = 1.5e-4 # Amps
+    procedure.numberpoints = 1448 # number of currents in IV sweep
+    procedure.num_IV = 2 # Number of IV sweeps at each point
     procedure.start_temp = 3. # K
     procedure.end_temp = 3. # K
     procedure.temp_points = 1 # in Temp sweep
     procedure.temp_ramp = 3. # K/min ramp rate
     procedure.start_field = 000000. # Oe
-    procedure.end_field = 000. # Oe
-    procedure.field_points = 21 # in Temp sweep
+    procedure.end_field = 00000. # Oe
+    procedure.field_points = 0 # in Temp sweep
     procedure.field_ramp = 60. # K/min ramp rate
     procedure.break_fields = False # Warm between positive and neg fields
-    procedure.temporfield = 'Field' # Change Temp or Field. Capitilize T/F
+    procedure.temporfield = 'Temp' # Change Temp or Field. Capitilize T/F
     procedure.sweep_type = 'list' # 'linear' for linear sweep, 'list' for custom
-    procedure.i_plus = 4 # I+ switch pin
-    procedure.i_minus = 7 # I- switch pin
-    procedure.v_plus = 2 # V+ switch pin
-    procedure.v_minus = 5 # I- switch pin
+    procedure.i_plus = 1 # I+ switch pin
+    procedure.i_minus = 5 # I- switch pin
+    procedure.v_plus = 3 # V+ switch pin
+    procedure.v_minus = 4 # I- switch pin
     # Stop editing
 
     procedure.delay = 1.e-1
@@ -271,4 +274,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
