@@ -1,7 +1,10 @@
-# This script runs a Hall sweep using a QD Dynacool PPMS cryostat
-# and Keithley electronics. The Keithleys are controlled directly,
-# while the cryostat is controlled through MultiVu via QD scripts
-# in the PythonControl library.
+# This script runs Hall and Temperature sweeps using a QD Dynacool
+# PPMS cryostat and Keithley electronics. The Keithleys are controlled
+# directly, while the cryostat is controlled through MultiVu via QD scripts
+# in the PythonControl library, and my wrapper MultiVu_talk_ngc. This script
+# allows an arbitrary number of sweeps to be run one after the other and
+# and parameters for each sweep to be selected customly. This allows a high 
+# degree of automation when using custom pin configurations with the PPMS.
 
 
 import numpy as np
@@ -31,20 +34,20 @@ import ngcmeas.switch_matrix as sm
 import MultiVu_talk_ngc as mv
 from PythonControl.parse_inputs import inputs
 
+
+# Specific host and port for UW-Madison PPMS
 host = "128.104.184.130"
 port = 5000
 
 
 class TransportMeas(Procedure):
-
-    #def __init__(self):
-        #self.host = host
-        #self.port = port
-        #self.meastype = meastype
-        #self.tempset = tempset
-        #self.maxb = maxb
-        #super().__init__()
-
+    """
+    This class allows either a Hall or Temp sweep to be performed, and it
+    integrates with the ManagedWindow gui. The startup and execute methods
+    are run by PyMeausre, and are what controls the exeperiment procedure.
+    """
+    
+    # Experiment parameters for the sweeps.
     iterations = IntegerParameter('Measurement Number', default=1)
     high_current = FloatParameter('Max Current', units='A', default=1.e-6)
     delta = FloatParameter('Delta', units='s', default=1.e-3)
@@ -73,7 +76,7 @@ class TransportMeas(Procedure):
                     'R vdp 22', 'R Hall 12', 'R Hall 22']
 
 
-
+    # Check if these work at all to change the Data Columns
     #if self.pinconfig == '1vdP':
     if pinconfig == '1vdP':
        DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R vdp 1', \
@@ -91,40 +94,12 @@ class TransportMeas(Procedure):
                         'R bridge 2']
 
 
-    def resistance_measure(self, config):
-
-        print('in resistance_measure', config)
-        if config == 'vdp1':
-            self.switch.clos_vdp1()
-        if config == 'vdp2':
-            self.switch.clos_vdp2()
-        if config == 'Hall1':
-            self.switch.clos_Hall1()
-        if config == 'Hall2':
-            self.switch.clos_Hall2()
-        if config == 'vdp12':
-            self.switch.clos_vdp12()
-        if config == 'vdp22':
-            self.switch.clos_vdp22()
-        if config == 'Hall12':
-            self.switch.clos_Hall12()
-        if config == 'Hall22':
-            self.switch.clos_Hall22()
-        if config == 'c1': 
-            self.switch.clos_custom1()
-        if config == 'c2': 
-            self.switch.clos_custom2()
-
-
-        sleep(0.36)
-
-        res = self.currentsource.min_inloop_delta()
-        self.switch.open_all()
-        print('Done and opened switches', res)#/self.high_current)
-        return res[0]/self.high_current
-
-
     def startup(self):
+    """
+    This method controls the device startup that occurs for every new sweep
+    the user runs. This method connects to the voltmeter and switch matrix
+    and initializes and arms the current source for specific measurement.
+    """
         print('Starting Up')
         KE6221adapter = VISAAdapter("GPIB0::12")
         KE7001adapter = VISAAdapter("GPIB0::7")
@@ -280,6 +255,54 @@ class TransportMeas(Procedure):
                         inum += 1
 
             print('Done Temp Sweep')
+
+
+    def resistance_measure(self, config):
+        """
+        This function runs the individual resitance measurements, from setting
+        the switch matrix pins, to actually collecting the voltage. Custom
+        pin configurations for non-vdP situations are also set here.
+        """
+
+        print('in resistance_measure', config)
+        if config == 'vdp1':
+            self.switch.clos_vdp1()
+        if config == 'vdp2':
+            self.switch.clos_vdp2()
+        if config == 'Hall1':
+            self.switch.clos_Hall1()
+        if config == 'Hall2':
+            self.switch.clos_Hall2()
+        if config == 'vdp12':
+            self.switch.clos_vdp12()
+        if config == 'vdp22':
+            self.switch.clos_vdp22()
+        if config == 'Hall12':
+            self.switch.clos_Hall12()
+        if config == 'Hall22':
+            self.switch.clos_Hall22()
+
+        # These are for bridges or other configurations that do not use van 
+        # der Pauw configurations.
+        if config == 'cust1':
+            self.switch.clos_custom(1, 2, 3, 9) #5, 1, 6, 2
+        if config == 'cust2':
+            self.switch.clos_custom(1, 2, 3, 5)
+        if config == 'cust3':
+            self.switch.clos_custom(1, 2, 8, 4) #5, 1, 6, 2
+        if config == 'cust4':
+            self.switch.clos_custom(1, 2, 8, 6)
+
+
+
+        sleep(0.36)
+
+        # Below is where the voltage is actually measured
+        volt = self.currentsource.min_inloop_delta()
+        self.switch.open_all()
+        print('Done and opened switches', volt)#/self.high_current)
+        return volt[0]/self.high_current
+
 
 
     def in_loop(self, configs):
