@@ -61,7 +61,14 @@ class TransportMeas(Procedure):
     fieldramp = FloatParameter('Magnetic Field Ramp Rate', units='Oe/min', default=100.)
     hysteresis = BooleanParameter('Do we expect a hysteresis in B', default = False)
     pinconfig = Parameter('Pin Configuration', default='2bridge')
-
+    b1vplus = IntegerParameter('B1 V+ pin', default=1)
+    b1vminus = IntegerParameter('B1 V- pin', default=1)
+    b1iplus = IntegerParameter('B1 I+ pin', default=1)
+    b1iminus = IntegerParameter('B1 I- pin', default=1)
+    b2vplus = IntegerParameter('B2 V+ pin', default=1)
+    b2vminus = IntegerParameter('B2 V- pin', default=1)
+    b2iplus = IntegerParameter('B2 I+ pin', default=1)
+    b2iminus = IntegerParameter('B2 I- pin', default=1)
     #DATA_COLUMNS = ['Time', 'Temperature', '\g(m)\-(0)H', 'R vdp 1', \
     #                'R vdp 2', 'R Hall 1', 'R Hall 2'] # Had to have something
     #                                                   # here with no logic in order 
@@ -159,8 +166,8 @@ class TransportMeas(Procedure):
     def execute(self):
 
         #self.maxb = 100000.
-        self.switch.set_pins(1,2,4,3) #1,3,4,2 Jieun wiring; 1243 Neil wiring
-        self.switch.set_pins2(5,6,8,9) #1,3,4,2 # 7 -> 9 b/c 7 is bad at SM
+        self.switch.set_pins(self.b1vplus,self.b1vminus,self.b1iplus,self.b1iminus) #1,3,4,2 Jieun wiring; 1243 Neil wiring
+        self.switch.set_pins2(self.b2vplus,self.b2vminus,self.b2iplus,self.b2iminus) #1,3,4,2 # 7 -> 9 b/c 7 is bad at SM
         if self.pinconfig == '1vdP':
              configs = ['vdp1', 'vdp2', 'Hall1', 'Hall2']
         if self.pinconfig == '2vdP':
@@ -401,19 +408,28 @@ class MainWindow(ManagedWindow):
         #super(MainWindow, self).__init__(
         super().__init__(
             procedure_class = TransportMeas,
-            inputs=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
-                    'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
-                    'tempramp', 'maxfield', 'fieldramp', 'hysteresis', 'pinconfig'],
-            displays=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
-                    'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
-                    'tempramp', 'maxfield', 'fieldramp', 'hysteresis', 'pinconfig'],
+            # inputs=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
+            #         'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
+            #         'tempramp', 'maxfield', 'fieldramp', 'hysteresis', 'pinconfig'],
+            # displays=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
+            #         'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
+            #         'tempramp', 'maxfield', 'fieldramp', 'hysteresis', 'pinconfig'],
+            inputs=['iterations', 'high_current', 'delta',\
+                    'nplc', 'rvng', 'date', 'meastype', 'tempset',\
+                    'tempramp', 'maxfield', 'fieldramp', 'hysteresis', 'pinconfig',\
+                    'b1vplus','b1vminus', 'b1iplus', 'b1iminus','b2vplus','b2vminus', 'b2iplus', 'b2iminus'],
+            displays=['iterations', 'high_current', 'delta',\
+                    'nplc', 'rvng', 'date', 'meastype', 'tempset',\
+                    'tempramp', 'maxfield', 'fieldramp', 'hysteresis', 'pinconfig'\
+                    'b1vplus','b1vminus', 'b1iplus', 'b1iminus','b2vplus','b2vminus', 'b2iplus', 'b2iminus'],    
             x_axis='Time',
             y_axis='R vdp 1',
             directory_input=True,
             sequencer=True,
-            sequencer_inputs=['iterations', 'high_current', 'delta', 'swpct1', 'swpct2',\
-                    'swpct3', 'nplc', 'rvng', 'date', 'meastype', 'tempset',\
-                    'tempramp', 'maxfield', 'fieldramp', 'hysteresis', 'pinconfig'],
+            sequencer_inputs=['iterations', 'high_current', 'delta',\
+                    'nplc', 'rvng', 'date', 'meastype', 'tempset',\
+                    'tempramp', 'maxfield', 'fieldramp', 'hysteresis', 'pinconfig'\
+                    'b1vplus','b1vminus', 'b1iplus', 'b1iminus','b2vplus','b2vminus', 'b2iplus', 'b2iminus'],
             inputs_in_scrollarea = True)#,
             #sequence_file="gui_sequencer_example_sequence.txt"
         #)
